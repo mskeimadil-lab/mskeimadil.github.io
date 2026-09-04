@@ -24,12 +24,17 @@ function switchView(viewName) {
     if (viewName === 'home') renderNovels();
 }
 
+// نافذة إدخال أو تعديل المفتاح الخاص بالزائر
 function openApiKeyModal() {
-    const key = prompt('أدخل مفتاح Gemini API الخاص بك:', apiKey);
-    if (key !== null) {
-        apiKey = key.trim();
+    const userKey = prompt('أدخل مفتاح Gemini API الخاص بك (يُحفظ في متصفحك فقط ولا يراه أحد غيرك):', apiKey);
+    if (userKey !== null) {
+        apiKey = userKey.trim();
         localStorage.setItem('app_gemini_key', apiKey);
-        alert('تم حفظ المفتاح بنجاح!');
+        if (apiKey) {
+            alert('تم حفظ المفتاح بنجاح! يمكنك الآن استخدام الذكاء الاصطناعي.');
+        } else {
+            alert('تم إزالة المفتاح.');
+        }
     }
 }
 
@@ -93,9 +98,11 @@ function changeFontSize(delta) {
 }
 
 async function generateChapterWithAI() {
+    // إذا لم يملك الزائر مفتاحاً مخزناً، يطلب منه الكود إدخاله فوراً
     if (!apiKey) {
-        alert('يرجى إضافة مفتاح Gemini API أولاً من الزر في الأعلى!');
-        return;
+        alert('لاستخدام الذكاء الاصطناعي، يرجى إدخال مفتاح Gemini API الخاص بك أولاً.');
+        openApiKeyModal();
+        if (!apiKey) return;
     }
 
     const chapterTitle = document.getElementById('chapterTitle').value || 'فصل جديد';
@@ -103,7 +110,7 @@ async function generateChapterWithAI() {
     const novel = novels.find(n => n.id === currentNovelId);
 
     if (!promptText) {
-        alert('يرجى كتابة وصف أو أفكار للفصل!');
+        alert('يرجى كتابة وصف أو أفكار للفصل أولاً!');
         return;
     }
 
@@ -123,6 +130,18 @@ async function generateChapterWithAI() {
         });
 
         const data = await response.json();
+
+        // إظهار سبب الخطأ بوضوح إذا كان المفتاح الذي أدخله المستخدم خاطئاً
+        if (data.error) {
+            alert('خطأ من Google Gemini:\n' + data.error.message + '\n\nيرجى التأكد من صحة المفتاح الذي أدخلته عبر زر "مفتاح Gemini".');
+            return;
+        }
+
+        if (!data.candidates || !data.candidates[0] || !data.candidates[0].content) {
+            alert('لم يستجب النموذج بشكل صحيح، يرجى المحاولة لاحقاً.');
+            return;
+        }
+
         const aiContent = data.candidates[0].content.parts[0].text;
 
         novel.chapters.push({
@@ -132,12 +151,12 @@ async function generateChapterWithAI() {
         });
 
         saveNovels();
-        alert('تم توليد الفصل وإضافته بنجاح!');
+        alert('تم توليد الفصل بنجاح!');
         document.getElementById('chapterTitle').value = '';
         document.getElementById('aiPrompt').value = '';
         openNovelDetail(currentNovelId);
     } catch (err) {
-        alert('حدث خطأ أثناء التوليد: ' + err.message);
+        alert('حدث خطأ في الاتصال: ' + err.message);
     } finally {
         btn.disabled = false;
         btn.innerText = 'توليد الفصل بالذكاء الاصطناعي';
