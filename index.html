@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>منصة الروايات - Gemini AI</title>
+    <title>مكتبة الروايات</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -11,8 +11,7 @@
         <h2>مكتبة الروايات</h2>
         <div>
             <button onclick="switchView('home')">الرئيسية</button>
-            <button onclick="switchView('publish')">نشر رواية</button>
-            <button onclick="openApiKeyModal()">مفتاح Gemini</button>
+            <button onclick="switchView('publish')">نشر رواية جديدة</button>
         </div>
     </nav>
 
@@ -23,12 +22,13 @@
             <div id="novelsGrid" class="grid"></div>
         </section>
 
-        <!-- نشر رواية -->
+        <!-- نشر رواية جديدة -->
         <section id="publishView" class="view hidden">
-            <h3>نشر رواية جديدة</h3>
+            <h3>إضافة رواية جديدة</h3>
             <form id="novelForm">
                 <input type="text" id="novelTitle" placeholder="عنوان الرواية" required>
                 <input type="text" id="novelAuthor" placeholder="اسم الكاتب" required>
+                <input type="url" id="novelCover" placeholder="رابط صورة الغلاف (URL)" required>
                 <textarea id="novelDesc" placeholder="ملخص الرواية..." required></textarea>
                 <button type="submit" class="btn-primary">حفظ الرواية</button>
             </form>
@@ -36,26 +36,32 @@
 
         <!-- تفاصيل الرواية -->
         <section id="detailView" class="view hidden">
-            <button onclick="switchView('home')">← العودة</button>
-            <h2 id="detailTitle"></h2>
-            <p id="detailAuthor" class="author"></p>
-            <p id="detailDesc"></p>
+            <button onclick="switchView('home')" class="btn-back">← العودة للرئيسية</button>
+            <div class="novel-header">
+                <img id="detailCover" src="" alt="غلاف الرواية" class="detail-cover">
+                <div class="novel-info">
+                    <h2 id="detailTitle"></h2>
+                    <p id="detailAuthor" class="author"></p>
+                    <p id="detailDesc"></p>
+                </div>
+            </div>
 
             <hr>
             <h3>الفصول</h3>
             <div id="chaptersList"></div>
 
-            <div class="ai-box">
-                <h4>توليد فصل جديد بواسطة Gemini AI</h4>
-                <input type="text" id="chapterTitle" placeholder="عنوان الفصل الجديد">
-                <textarea id="aiPrompt" placeholder="اكتب وصفاً أو أفكاراً للفصل المراد توليده..."></textarea>
-                <button id="generateBtn" onclick="generateChapterWithAI()">توليد الفصل بالذكاء الاصطناعي</button>
+            <!-- إضافة فصل يدوي -->
+            <div class="add-chapter-box">
+                <h4>إضافة فصل جديد</h4>
+                <input type="text" id="chapterTitle" placeholder="عنوان الفصل">
+                <textarea id="chapterContent" placeholder="نص الفصل..."></textarea>
+                <button onclick="addChapterManually()" class="btn-primary">حفظ الفصل</button>
             </div>
         </section>
 
         <!-- القراءة -->
         <section id="readerView" class="view hidden">
-            <button onclick="switchView('detail')">← العودة للتفاصيل</button>
+            <button onclick="switchView('detail')" class="btn-back">← العودة للتفاصيل</button>
             <div class="reader-controls">
                 <button onclick="changeFontSize(2)">A+</button>
                 <button onclick="changeFontSize(-2)">A-</button>
