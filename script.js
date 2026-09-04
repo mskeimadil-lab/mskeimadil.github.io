@@ -1,141 +1,108 @@
-const defaultNovels = [
+const defaultNews = [
     {
-        id: '1',
-        title: 'رواية تجريبية',
-        author: 'الكاتب',
-        cover: 'https://images.unsplash.com/photo-1543002588-bfa74002ed7e?w=500',
-        desc: 'هذه رواية تجريبية لعرض التنسيق وتجربة إضافة الفصول والصور.',
-        chapters: [
-            { id: 'c1', title: 'الفصل الأول: البداية', content: 'هذا هو نص الفصل الأول من الرواية.' }
-        ]
+        id: "1",
+        title: "إطلاق تحديثات جديدة في عالم التكنولوجيا والذكاء الاصطناعي",
+        link: "https://news.google.com",
+        date: "اليوم",
+        source: "أخبار التكنولوجيا",
+        description: "شهد العالم اليوم إعلانات متسارعة حول تطورات تقنيات الذكاء الاصطناعي وتطبيقاتها الجديدة في مختلف المجالات.",
+        category: "تكنولوجيا"
+    },
+    {
+        id: "2",
+        title: "استعدادات مكثفة للمنافسات الرياضية العالمية المقبلة",
+        link: "https://news.google.com",
+        date: "اليوم",
+        source: "الرياضة اليوم",
+        description: "تواصل الفرق والمنتخبات استعداداتها الفنية والبدنية لخوض المباريات القادمة وسط تطلعات كبيرة للجماهير.",
+        category: "رياضة"
+    },
+    {
+        id: "3",
+        title: "أسواق المال العالمية تشهد تحركات إيجابية في التداولات الأسبوعية",
+        link: "https://news.google.com",
+        date: "اليوم",
+        source: "الاقتصاد اليوم",
+        description: "سجلت المؤشرات الاقتصادية ارتفاعاً ملحوظاً مع نهاية التداولات الأسبوعية وسط تفاعلات إيجابية من المستثمرين.",
+        category: "اقتصاد"
+    },
+    {
+        id: "4",
+        title: "مستجدات الأحداث العالمية والتطورات الميدانية الأخيرة",
+        link: "https://news.google.com",
+        date: "اليوم",
+        source: "الأنباء العالمية",
+        description: "متابعة مستمرة لأبرز الأحداث والتطورات على الساحة الدولية والتغطيات المباشرة لأهم الأنباء العاجلة.",
+        category: "عاجل وعالمي"
     }
 ];
 
-let novels = JSON.parse(localStorage.getItem('app_novels_data')) || defaultNovels;
-let currentNovelId = null;
+let allArticles = [];
+let currentCategory = 'الكل';
 
-function saveNovels() {
-    localStorage.setItem('app_novels_data', JSON.stringify(novels));
-}
-
-function switchView(viewName) {
-    document.querySelectorAll('.view').forEach(v => v.classList.add('hidden'));
-    document.getElementById(viewName + 'View').classList.remove('hidden');
-    if (viewName === 'home') renderNovels();
-}
-
-function renderNovels() {
-    const grid = document.getElementById('novelsGrid');
-    grid.innerHTML = novels.map(n => `
-        <div class="card" onclick="openNovelDetail('${n.id}')">
-            <img src="${n.cover || 'https://via.placeholder.com/200x280?text=No+Cover'}" alt="${n.title}" class="card-img" onerror="this.src='https://via.placeholder.com/200x280?text=No+Cover'">
-            <div class="card-content">
-                <h3>${n.title}</h3>
-                <p class="author">بقلم: ${n.author}</p>
-                <p>${n.desc.substring(0, 50)}...</p>
-            </div>
-        </div>
-    `).join('');
-}
-
-document.getElementById('novelForm').addEventListener('submit', (e) => {
-    e.preventDefault();
-    const newNovel = {
-        id: Date.now().toString(),
-        title: document.getElementById('novelTitle').value,
-        author: document.getElementById('novelAuthor').value,
-        cover: document.getElementById('novelCover').value,
-        desc: document.getElementById('novelDesc').value,
-        chapters: []
-    };
-    novels.push(newNovel);
-    saveNovels();
-    e.target.reset();
-    switchView('home');
-});
-
-function openNovelDetail(id) {
-    currentNovelId = id;
-    const novel = novels.find(n => n.id === id);
-    if (!novel) return;
-
-    document.getElementById('detailCover').src = novel.cover || 'https://via.placeholder.com/200x280?text=No+Cover';
-    document.getElementById('detailTitle').innerText = novel.title;
-    document.getElementById('detailAuthor').innerText = 'بقلم: ' + novel.author;
-    document.getElementById('detailDesc').innerText = novel.desc;
-
-    // ربط زر حذف الرواية
-    const deleteNovelBtn = document.getElementById('deleteNovelBtn');
-    deleteNovelBtn.onclick = () => deleteNovel(id);
-
-    const chaptersList = document.getElementById('chaptersList');
-    chaptersList.innerHTML = novel.chapters.length ? novel.chapters.map(c => `
-        <div class="chapter-item" onclick="openReader('${c.id}')">
-            <span>${c.title}</span>
-            <button class="btn-danger-sm" onclick="deleteChapter('${c.id}', event)">حذف 🗑️</button>
-        </div>
-    `).join('') : '<p>لا توجد فصول مضافة بعد.</p>';
-
-    switchView('detail');
-}
-
-function deleteNovel(id) {
-    if (confirm('هل أنت تأكد من رغبتك في حذف هذه الرواية بالكامل؟')) {
-        novels = novels.filter(n => n.id !== id);
-        saveNovels();
-        switchView('home');
-    }
-}
-
-function deleteChapter(chapterId, event) {
-    event.stopPropagation(); // منع فتح الفصل عند الضغط على زر الحذف
-    if (confirm('هل أنت تأكد من حذف هذا الفصل؟')) {
-        const novel = novels.find(n => n.id === currentNovelId);
-        if (novel) {
-            novel.chapters = novel.chapters.filter(c => c.id !== chapterId);
-            saveNovels();
-            openNovelDetail(currentNovelId);
+async function loadNews() {
+    try {
+        const response = await fetch('news.json?t=' + new Date().getTime());
+        if (!response.ok) throw new Error("File not found");
+        const data = await response.json();
+        
+        if (data.articles && data.articles.length > 0) {
+            allArticles = data.articles;
+            document.getElementById('lastUpdate').innerText = 'آخر تحديث تلقائي: ' + (data.updated_at || 'الآن');
+        } else {
+            throw new Error("No articles");
         }
+    } catch (err) {
+        allArticles = defaultNews;
+        document.getElementById('lastUpdate').innerText = 'آخر تحديث: مباشر';
     }
+    renderArticles();
 }
 
-function addChapterManually() {
-    const title = document.getElementById('chapterTitle').value.trim();
-    const content = document.getElementById('chapterContent').value.trim();
-    const novel = novels.find(n => n.id === currentNovelId);
+function renderArticles() {
+    const grid = document.getElementById('newsGrid');
+    const searchInput = document.getElementById('searchInput');
+    const searchTerm = searchInput ? searchInput.value.toLowerCase() : '';
 
-    if (!title || !content) {
-        alert('يرجى كتابة عنوان الفصل ونصه!');
+    const filtered = allArticles.filter(item => {
+        const matchesCategory = (currentCategory === 'الكل' || item.category === currentCategory);
+        const matchesSearch = item.title.toLowerCase().includes(searchTerm) || item.description.toLowerCase().includes(searchTerm);
+        return matchesCategory && matchesSearch;
+    });
+
+    if (filtered.length === 0) {
+        grid.innerHTML = '<p style="text-align:center; grid-column: 1/-1; padding: 40px;">لا توجد أخبار مطابقة للبحث حالياً.</p>';
         return;
     }
 
-    novel.chapters.push({
-        id: Date.now().toString(),
-        title: title,
-        content: content
+    grid.innerHTML = filtered.map(item => `
+        <article class="card">
+            <div>
+                <div class="card-header">
+                    <span class="tag">${item.category}</span>
+                    <span class="source">${item.source}</span>
+                </div>
+                <h3>${item.title}</h3>
+                <p>${item.description}</p>
+            </div>
+            <div class="card-footer">
+                <span class="date">${item.date}</span>
+                <a href="${item.link}" target="_blank" class="read-link">قراءة الخبر الكامل ↗</a>
+            </div>
+        </article>
+    `).join('');
+}
+
+function filterCategory(cat) {
+    currentCategory = cat;
+    document.querySelectorAll('.categories button').forEach(btn => {
+        btn.classList.toggle('active', btn.innerText.includes(cat) || (cat === 'الكل' && btn.innerText === 'الكل'));
     });
-
-    saveNovels();
-    document.getElementById('chapterTitle').value = '';
-    document.getElementById('chapterContent').value = '';
-    alert('تم حفظ الفصل بنجاح!');
-    openNovelDetail(currentNovelId);
+    renderArticles();
 }
 
-function openReader(chapterId) {
-    const novel = novels.find(n => n.id === currentNovelId);
-    const chapter = novel.chapters.find(c => c.id === chapterId);
-    if (!chapter) return;
-
-    document.getElementById('readerChapterTitle').innerText = chapter.title;
-    document.getElementById('readerContent').innerText = chapter.content;
-    switchView('reader');
+if (document.getElementById('searchInput')) {
+    document.getElementById('searchInput').addEventListener('input', renderArticles);
 }
 
-let currentFontSize = 18;
-function changeFontSize(delta) {
-    currentFontSize += delta;
-    document.getElementById('readerContent').style.fontSize = currentFontSize + 'px';
-}
-
-renderNovels();
+loadNews();
