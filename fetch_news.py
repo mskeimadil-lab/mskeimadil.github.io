@@ -11,9 +11,26 @@ FEEDS = {
     "اقتصاد": "https://news.google.com/rss/search?q=%D8%A7%D9%82%D8%AA%D8%B5%D8%A7%D8%AF&hl=ar&gl=MA&ceid=MA:ar"
 }
 
+DEFAULT_IMAGES = {
+    "عاجل وعالمي": "https://images.unsplash.com/photo-1585829365295-ab7cd400c167?w=800",
+    "تكنولوجيا": "https://images.unsplash.com/photo-1518770660439-4636190af475?w=800",
+    "رياضة": "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=800",
+    "اقتصاد": "https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=800"
+}
+
 def clean_html(raw_html):
     cleanr = re.compile('<.*?>')
     return re.sub(cleanr, '', raw_html)
+
+def extract_image(item_xml, desc_html, category):
+    for elem in item_xml:
+        if 'content' in elem.tag or 'thumbnail' in elem.tag:
+            url = elem.attrib.get('url')
+            if url: return url
+    img_match = re.search(r'src=["\'](.*?)["\']', desc_html)
+    if img_match:
+        return img_match.group(1)
+    return DEFAULT_IMAGES.get(category, "https://images.unsplash.com/photo-1504711434969-e33886168f5c?w=800")
 
 all_news = []
 headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
@@ -32,15 +49,17 @@ for category, url in FEEDS.items():
                 desc = item.find('description').text if item.find('description') is not None else ""
                 source = item.find('source').text if item.find('source') is not None else "مصدر إخباري"
                 
-                clean_desc = clean_html(desc) if desc else ""
+                image = extract_image(item, desc, category)
+                clean_desc = clean_html(desc) if desc else title
                 
                 all_news.append({
                     "id": str(abs(hash(title))),
                     "title": title,
                     "link": link,
-                    "date": pubDate[:16] if pubDate else "",
+                    "date": pubDate[:16] if pubDate else "اليوم",
                     "source": source,
-                    "description": clean_desc[:180] + "..." if len(clean_desc) > 180 else clean_desc,
+                    "image": image,
+                    "description": clean_desc,
                     "category": category
                 })
     except Exception as e:
@@ -54,4 +73,4 @@ output = {
 with open("news.json", "w", encoding="utf-8") as f:
     json.dump(output, f, ensure_ascii=False, indent=2)
 
-print(f"تم جلب وحفظ {len(all_news)} خبر بنجاح!")
+print(f"تم جلب وحفظ {len(all_news)} خبر مع الصور بنجاح!")
