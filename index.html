@@ -3,76 +3,39 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>مكتبة الروايات</title>
+    <title>الجريدة العالمية | أخبار عاجلة تلقائية</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <nav class="navbar">
-        <h2>مكتبة الروايات</h2>
-        <div>
-            <button onclick="switchView('home')">الرئيسية</button>
-            <button onclick="switchView('publish')">نشر رواية جديدة</button>
+    <header class="header">
+        <div class="logo">
+            <h1>📰 الجريدة العالمية</h1>
+            <p>أخبار عاجلة تتحدث تلقائياً كل ساعة</p>
         </div>
+        <div class="last-update" id="lastUpdate">جاري التحميل...</div>
+    </header>
+
+    <div class="search-bar">
+        <input type="text" id="searchInput" placeholder="🔍 ابحث في الأخبار العاجلة...">
+    </div>
+
+    <nav class="categories" id="categoryTabs">
+        <button class="active" onclick="filterCategory('الكل')">الكل</button>
+        <button onclick="filterCategory('عاجل وعالمي')">🌍 عاجل وعالمي</button>
+        <button onclick="filterCategory('تكنولوجيا')">💻 تكنولوجيا</button>
+        <button onclick="filterCategory('رياضة')">⚽ رياضة</button>
+        <button onclick="filterCategory('اقتصاد')">📈 اقتصاد</button>
     </nav>
 
-    <div class="container">
-        <!-- الرئيسية -->
-        <section id="homeView" class="view">
-            <h3>الروايات المتاحة</h3>
-            <div id="novelsGrid" class="grid"></div>
-        </section>
+    <main class="container">
+        <div id="newsGrid" class="news-grid">
+            <p class="loading">جاري جلب أحدث الأخبار...</p>
+        </div>
+    </main>
 
-        <!-- نشر رواية جديدة -->
-        <section id="publishView" class="view hidden">
-            <h3>إضافة رواية جديدة</h3>
-            <form id="novelForm">
-                <input type="text" id="novelTitle" placeholder="عنوان الرواية" required>
-                <input type="text" id="novelAuthor" placeholder="اسم الكاتب" required>
-                <input type="url" id="novelCover" placeholder="رابط صورة الغلاف (URL)" required>
-                <textarea id="novelDesc" placeholder="ملخص الرواية..." required></textarea>
-                <button type="submit" class="btn-primary">حفظ الرواية</button>
-            </form>
-        </section>
-
-        <!-- تفاصيل الرواية -->
-        <section id="detailView" class="view hidden">
-            <div class="detail-actions">
-                <button onclick="switchView('home')" class="btn-back">← العودة للرئيسية</button>
-                <button id="deleteNovelBtn" class="btn-danger">حذف الرواية 🗑️</button>
-            </div>
-            <div class="novel-header">
-                <img id="detailCover" src="" alt="غلاف الرواية" class="detail-cover">
-                <div class="novel-info">
-                    <h2 id="detailTitle"></h2>
-                    <p id="detailAuthor" class="author"></p>
-                    <p id="detailDesc"></p>
-                </div>
-            </div>
-
-            <hr>
-            <h3>الفصول</h3>
-            <div id="chaptersList"></div>
-
-            <!-- إضافة فصل يدوي -->
-            <div class="add-chapter-box">
-                <h4>إضافة فصل جديد</h4>
-                <input type="text" id="chapterTitle" placeholder="عنوان الفصل">
-                <textarea id="chapterContent" placeholder="نص الفصل..."></textarea>
-                <button onclick="addChapterManually()" class="btn-primary">حفظ الفصل</button>
-            </div>
-        </section>
-
-        <!-- القراءة -->
-        <section id="readerView" class="view hidden">
-            <button onclick="switchView('detail')" class="btn-back">← العودة للتفاصيل</button>
-            <div class="reader-controls">
-                <button onclick="changeFontSize(2)">A+</button>
-                <button onclick="changeFontSize(-2)">A-</button>
-            </div>
-            <h2 id="readerChapterTitle"></h2>
-            <div id="readerContent" class="reader-body"></div>
-        </section>
-    </div>
+    <footer>
+        <p>جميع الحقوق محفوظة &copy; الجريدة العالمية - تحديث تلقائي بواسطة GitHub Actions</p>
+    </footer>
 
     <script src="script.js"></script>
 </body>
