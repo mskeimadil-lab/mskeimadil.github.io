@@ -6,7 +6,7 @@ const defaultNovels = [
         cover: 'https://images.unsplash.com/photo-1543002588-bfa74002ed7e?w=500',
         desc: 'هذه رواية تجريبية لعرض التنسيق وتجربة إضافة الفصول والصور.',
         chapters: [
-            { id: 'c1', title: 'الفصل الأول: البداية', content: 'هذا هو نص الفصل الأول من الرواية. يمكنك إضافة المزيد من الفصول بملء النموذج بالأسفل.' }
+            { id: 'c1', title: 'الفصل الأول: البداية', content: 'هذا هو نص الفصل الأول من الرواية.' }
         ]
     }
 ];
@@ -64,12 +64,39 @@ function openNovelDetail(id) {
     document.getElementById('detailAuthor').innerText = 'بقلم: ' + novel.author;
     document.getElementById('detailDesc').innerText = novel.desc;
 
+    // ربط زر حذف الرواية
+    const deleteNovelBtn = document.getElementById('deleteNovelBtn');
+    deleteNovelBtn.onclick = () => deleteNovel(id);
+
     const chaptersList = document.getElementById('chaptersList');
     chaptersList.innerHTML = novel.chapters.length ? novel.chapters.map(c => `
-        <div class="chapter-item" onclick="openReader('${c.id}')">${c.title}</div>
+        <div class="chapter-item" onclick="openReader('${c.id}')">
+            <span>${c.title}</span>
+            <button class="btn-danger-sm" onclick="deleteChapter('${c.id}', event)">حذف 🗑️</button>
+        </div>
     `).join('') : '<p>لا توجد فصول مضافة بعد.</p>';
 
     switchView('detail');
+}
+
+function deleteNovel(id) {
+    if (confirm('هل أنت تأكد من رغبتك في حذف هذه الرواية بالكامل؟')) {
+        novels = novels.filter(n => n.id !== id);
+        saveNovels();
+        switchView('home');
+    }
+}
+
+function deleteChapter(chapterId, event) {
+    event.stopPropagation(); // منع فتح الفصل عند الضغط على زر الحذف
+    if (confirm('هل أنت تأكد من حذف هذا الفصل؟')) {
+        const novel = novels.find(n => n.id === currentNovelId);
+        if (novel) {
+            novel.chapters = novel.chapters.filter(c => c.id !== chapterId);
+            saveNovels();
+            openNovelDetail(currentNovelId);
+        }
+    }
 }
 
 function addChapterManually() {

@@ -36,7 +36,10 @@
 
         <!-- تفاصيل الرواية -->
         <section id="detailView" class="view hidden">
-            <button onclick="switchView('home')" class="btn-back">← العودة للرئيسية</button>
+            <div class="detail-actions">
+                <button onclick="switchView('home')" class="btn-back">← العودة للرئيسية</button>
+                <button id="deleteNovelBtn" class="btn-danger">حذف الرواية 🗑️</button>
+            </div>
             <div class="novel-header">
                 <img id="detailCover" src="" alt="غلاف الرواية" class="detail-cover">
                 <div class="novel-info">

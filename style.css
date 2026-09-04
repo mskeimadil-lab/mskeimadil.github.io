@@ -8,7 +8,12 @@ button { background: #333; color: #fff; border: 1px solid #555; padding: 8px 14p
 button:hover { background: #444; }
 .btn-primary { background: #2563eb; border: none; color: white; width: 100%; padding: 12px; margin-top: 10px; border-radius: 6px; cursor: pointer; font-weight: bold; }
 .btn-primary:hover { background: #1d4ed8; }
-.btn-back { margin-bottom: 15px; }
+.btn-danger { background: #dc2626; border: none; color: white; padding: 8px 14px; border-radius: 6px; cursor: pointer; font-weight: bold; }
+.btn-danger:hover { background: #b91c1c; }
+.btn-danger-sm { background: #dc2626; border: none; color: white; padding: 4px 8px; border-radius: 4px; font-size: 0.8em; cursor: pointer; }
+.btn-danger-sm:hover { background: #b91c1c; }
+.detail-actions { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+
 input, textarea { width: 100%; padding: 10px; margin: 8px 0; background: #1e1e1e; border: 1px solid #333; color: #fff; border-radius: 6px; }
 textarea { min-height: 120px; resize: vertical; }
 
@@ -27,5 +32,5 @@ textarea { min-height: 120px; resize: vertical; }
 .reader-body { font-size: 18px; line-height: 1.8; margin-top: 20px; white-space: pre-wrap; background: #181818; padding: 20px; border-radius: 8px; border: 1px solid #2a2a2a; }
 .reader-controls { display: flex; justify-content: flex-end; gap: 5px; margin-bottom: 10px; }
 hr { margin: 20px 0; border: 0; border-top: 1px solid #333; }
-.chapter-item { padding: 12px; background: #1e1e1e; margin-bottom: 8px; border-radius: 6px; cursor: pointer; border: 1px solid #333; }
+.chapter-item { display: flex; justify-content: space-between; align-items: center; padding: 12px; background: #1e1e1e; margin-bottom: 8px; border-radius: 6px; cursor: pointer; border: 1px solid #333; }
 .chapter-item:hover { background: #282828; border-color: #2563eb; }
