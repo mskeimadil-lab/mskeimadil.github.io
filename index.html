@@ -27,11 +27,17 @@
         <button onclick="filterCategory('اقتصاد')">📈 اقتصاد</button>
     </nav>
 
+    <!-- وحدة الإعلان المباشرة في أعلى الصفحة -->
+    <div style="text-align: center; margin: 15px auto; max-width: 100%; overflow: hidden;">
+        <script async="async" data-cfasync="false" src="https://pl31174834.profitableratecpmnetwork.com/16862be26721288d37d8fc1d7d7cfba0/invoke.js"></script>
+        <div id="container-16862be26721288d37d8fc1d7d7cfba0"></div>
+    </div>
+
     <main class="container">
         <div id="newsGrid" class="news-grid"></div>
     </main>
 
-    <!-- نافذة قراءة الخبر داخل الموقع (Modal) -->
+    <!-- نافذة قراءة الخبر داخل الموقع -->
     <div id="articleModal" class="modal hidden">
         <div class="modal-content">
             <button class="close-btn" onclick="closeArticle()">✕ إغلاق</button>
@@ -40,8 +46,10 @@
                 <span id="modalSource" class="source"></span>
                 <h2 id="modalTitle"></h2>
                 <div id="modalDate" class="date-time"></div>
+                
                 <img id="modalImage" src="" alt="صورة الخبر" class="modal-img">
                 <p id="modalDesc" class="article-text"></p>
+                
                 <div class="modal-actions">
                     <a id="modalSourceLink" href="#" target="_blank" class="btn-external">الانتقال للمصدر الأصلي ↗</a>
                 </div>
@@ -50,7 +58,7 @@
     </div>
 
     <footer>
-        <p>جميع الحقوق محفوظة &copy; الجريدة العالمية - تحديث تلقائي بواسطة GitHub Actions</p>
+        <p>جميع الحقوق محفوظة &copy; الجريدة العالمية</p>
     </footer>
 
     <script src="script.js"></script>
