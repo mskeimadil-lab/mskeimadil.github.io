@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>منصة الروايات - Gemini AI</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <h2>مكتبة الروايات</h2>
+        <div>
+            <button onclick="switchView('home')">الرئيسية</button>
+            <button onclick="switchView('publish')">نشر رواية</button>
+            <button onclick="openApiKeyModal()">مفتاح Gemini</button>
+        </div>
+    </nav>
+
+    <div class="container">
+        <!-- الرئيسية -->
+        <section id="homeView" class="view">
+            <h3>الروايات المتاحة</h3>
+            <div id="novelsGrid" class="grid"></div>
+        </section>
+
+        <!-- نشر رواية -->
+        <section id="publishView" class="view hidden">
+            <h3>نشر رواية جديدة</h3>
+            <form id="novelForm">
+                <input type="text" id="novelTitle" placeholder="عنوان الرواية" required>
+                <input type="text" id="novelAuthor" placeholder="اسم الكاتب" required>
+                <textarea id="novelDesc" placeholder="ملخص الرواية..." required></textarea>
+                <button type="submit" class="btn-primary">حفظ الرواية</button>
+            </form>
+        </section>
+
+        <!-- تفاصيل الرواية -->
+        <section id="detailView" class="view hidden">
+            <button onclick="switchView('home')">← العودة</button>
+            <h2 id="detailTitle"></h2>
+            <p id="detailAuthor" class="author"></p>
+            <p id="detailDesc"></p>
+
+            <hr>
+            <h3>الفصول</h3>
+            <div id="chaptersList"></div>
+
+            <div class="ai-box">
+                <h4>توليد فصل جديد بواسطة Gemini AI</h4>
+                <input type="text" id="chapterTitle" placeholder="عنوان الفصل الجديد">
+                <textarea id="aiPrompt" placeholder="اكتب وصفاً أو أفكاراً للفصل المراد توليده..."></textarea>
+                <button id="generateBtn" onclick="generateChapterWithAI()">توليد الفصل بالذكاء الاصطناعي</button>
+            </div>
+        </section>
+
+        <!-- القراءة -->
+        <section id="readerView" class="view hidden">
+            <button onclick="switchView('detail')">← العودة للتفاصيل</button>
+            <div class="reader-controls">
+                <button onclick="changeFontSize(2)">A+</button>
+                <button onclick="changeFontSize(-2)">A-</button>
+            </div>
+            <h2 id="readerChapterTitle"></h2>
+            <div id="readerContent" class="reader-body"></div>
+        </section>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

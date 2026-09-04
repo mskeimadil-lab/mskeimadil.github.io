@@ -1,0 +1,34 @@
+name: Hourly Novel Scraper
+
+on:
+  schedule:
+    - cron: '0 * * * *' # تشغيل تلقائي كل ساعة
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build-and-scrape:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install Dependencies
+        run: pip install requests beautifulsoup4
+
+      - name: Run Scraper
+        run: python fetch_novel.py
+
+      - name: Push Updates
+        run: |
+          git config --global user.name "Hourly Novel Bot"
+          git config --global user.email "bot@github.com"
+          git add index.html
+          git commit -m "تحديث تلقائي للفصول والروايات 🚀" || exit 0
+          git push
