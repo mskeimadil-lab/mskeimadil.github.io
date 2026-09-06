@@ -86,15 +86,15 @@ async function gateLogin() {
   if (error) { document.getElementById("gateMsg").textContent = "بيانات الدخول غير صحيحة"; return; }
 
   const { data: profile } = await supabaseClient.from("profiles").select("*").eq("id", data.user.id).single();
-  if (!profile || !profile.is_admin) {
-    document.getElementById("gateMsg").textContent = "هذا الحساب ليس لديه صلاحية إدارة";
+  if (!profile) {
+    document.getElementById("gateMsg").textContent = "تعذر تحميل بيانات الحساب";
     await supabaseClient.auth.signOut();
     return;
   }
   admin = profile;
   document.getElementById("gate").classList.add("hidden");
   document.getElementById("adminPanel").classList.remove("hidden");
-  document.getElementById("adminName").textContent = admin.username;
+  document.getElementById("adminName").textContent = admin.username + (admin.is_admin ? " (أدمن)" : " (كاتب)");
   await loadCategories();
   await loadNovelsAdmin();
 }
@@ -107,7 +107,9 @@ async function loadCategories() {
 }
 
 async function loadNovelsAdmin() {
-  const { data } = await supabaseClient.from("novels").select("*, categories(name)").order("created_at", { ascending: false });
+  let query = supabaseClient.from("novels").select("*, categories(name)").order("created_at", { ascending: false });
+  if (!admin.is_admin) query = query.eq("owner_id", admin.id);
+  const { data } = await query;
   novels = data || [];
   document.getElementById("adminNovelsList").innerHTML = novels.map(n => `
     <div class="admin-row">
@@ -150,7 +152,7 @@ async function addNovel() {
   }
 
   const { error } = await supabaseClient.from("novels").insert({
-    title, author, category_id, description, status, cover_url
+    title, author, category_id, description, status, cover_url, owner_id: admin.id
   });
   if (error) { msg.style.color = "#f87171"; msg.textContent = "خطأ: " + error.message; return; }
 
