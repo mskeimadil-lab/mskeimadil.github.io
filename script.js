@@ -1,100 +1,241 @@
-let allArticles = [];
-let currentCategory = 'الكل';
+let allNovels = [];
+let allCategories = [];
+let currentCategory = "all";
+let currentUser = null;   // { id, username, is_admin }
+let currentNovel = null;
+let currentChapters = [];
+let currentChIndex = 0;
+let currentFontSize = 16;
+let authMode = "login";
 
-async function loadNews() {
-    try {
-        const response = await fetch('news.json?t=' + new Date().getTime());
-        if (!response.ok) throw new Error("File missing");
-        const data = await response.json();
-        
-        allArticles = data.articles || [];
-        document.getElementById('lastUpdate').innerText = 'آخر تحديث أوتوماتيكي: ' + (data.updated_at || 'الآن');
-        renderArticles();
-    } catch (err) {
-        document.getElementById('newsGrid').innerHTML = '<p style="text-align:center; grid-column: 1/-1; padding: 40px;">جاري استدعاء الأخبار والوسائط...</p>';
-    }
+// ================= تشغيل أولي =================
+document.addEventListener("DOMContentLoaded", async () => {
+  await checkSession();
+  await loadCategories();
+  await loadNovels();
+  document.getElementById("searchInput").addEventListener("input", renderNovels);
+});
+
+// ================= المصادقة =================
+async function checkSession() {
+  const { data: { session } } = await supabaseClient.auth.getSession();
+  if (session) await loadProfile(session.user.id);
 }
 
-function renderArticles() {
-    const grid = document.getElementById('newsGrid');
-    const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+async function loadProfile(userId) {
+  const { data, error } = await supabaseClient.from("profiles").select("*").eq("id", userId).single();
+  if (data) {
+    currentUser = data;
+    updateAuthUI();
+  }
+}
 
-    const filtered = allArticles.filter(item => {
-        const matchesCategory = (currentCategory === 'الكل' || item.category === currentCategory);
-        const matchesSearch = item.title.toLowerCase().includes(searchTerm) || item.description.toLowerCase().includes(searchTerm);
-        return matchesCategory && matchesSearch;
+function updateAuthUI() {
+  document.getElementById("loginBtn").classList.toggle("hidden", !!currentUser);
+  document.getElementById("signupBtn").classList.toggle("hidden", !!currentUser);
+  document.getElementById("logoutBtn").classList.toggle("hidden", !currentUser);
+  const badge = document.getElementById("userBadge");
+  if (currentUser) {
+    badge.textContent = "مرحباً، " + currentUser.username + (currentUser.is_admin ? " (أدمن)" : "");
+    badge.classList.remove("hidden");
+  } else {
+    badge.classList.add("hidden");
+  }
+}
+
+function showAuth(mode) {
+  authMode = mode;
+  document.getElementById("authTitle").textContent = mode === "login" ? "دخول" : "إنشاء حساب جديد";
+  document.getElementById("authMsg").textContent = "";
+  document.getElementById("authModal").classList.remove("hidden");
+}
+function closeAuth() { document.getElementById("authModal").classList.add("hidden"); }
+
+async function submitAuth() {
+  const username = document.getElementById("authUsername").value.trim();
+  const code = document.getElementById("authCode").value.trim();
+  const msg = document.getElementById("authMsg");
+  if (!username || !code) { msg.textContent = "الرجاء تعبئة الحقلين"; return; }
+  const email = username.toLowerCase().replace(/[^a-z0-9]/g, "") + "@" + AUTH_DOMAIN;
+
+  if (authMode === "signup") {
+    const { data, error } = await supabaseClient.auth.signUp({
+      email, password: code,
+      options: { data: { username } }
     });
-
-    if (filtered.length === 0) {
-        grid.innerHTML = '<p style="text-align:center; grid-column: 1/-1; padding: 40px;">لا توجد أخبار مطابقة.</p>';
-        return;
-    }
-
-    let html = '';
-    filtered.forEach((item, index) => {
-        html += `
-            <article class="card" onclick="openArticle('${item.id}')">
-                <div class="card-img-wrapper">
-                    <img src="${item.image}" alt="${item.title}" class="card-img" onerror="this.src='https://images.unsplash.com/photo-1504711434969-e33886168f5c?w=800'">
-                    ${item.is_video ? '<span class="video-badge">🎬 تقرير مصور</span>' : ''}
-                </div>
-                <div class="card-content">
-                    <div class="card-header">
-                        <span class="tag">${item.category}</span>
-                        <span class="source">${item.source}</span>
-                    </div>
-                    <h3>${item.title}</h3>
-                    <p>${item.description}</p>
-                    <div class="card-footer">
-                        <span class="date">${item.date}</span>
-                        <span class="read-more">عرض التقرير الكامل 👁️</span>
-                    </div>
-                </div>
-            </article>
-        `;
-
-        // إدراج الإعلان المباشر بعد كل 3 أخبار
-        if ((index + 1) % 3 === 0) {
-            html += `
-                <div class="ad-card">
-                    <span class="ad-tag">إعلان إخباري</span>
-                    <script async="async" data-cfasync="false" src="https://pl31174834.profitableratecpmnetwork.com/16862be26721288d37d8fc1d7d7cfba0/invoke.js"></script>
-                    <div id="container-16862be26721288d37d8fc1d7d7cfba0"></div>
-                </div>
-            `;
-        }
-    });
-
-    grid.innerHTML = html;
+    if (error) { msg.textContent = "خطأ: " + error.message; return; }
+    if (data.user) await loadProfile(data.user.id);
+  } else {
+    const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password: code });
+    if (error) { msg.textContent = "اسم مستخدم أو كود خاطئ"; return; }
+    await loadProfile(data.user.id);
+  }
+  closeAuth();
 }
 
-function openArticle(id) {
-    const article = allArticles.find(a => a.id === id);
-    if (!article) return;
-
-    document.getElementById('modalCategory').innerText = article.category;
-    document.getElementById('modalSource').innerText = article.source;
-    document.getElementById('modalTitle').innerText = article.title;
-    document.getElementById('modalDate').innerText = 'تاريخ التقرير: ' + article.date;
-    document.getElementById('modalImage').src = article.image;
-    document.getElementById('modalDesc').innerText = article.description;
-    document.getElementById('modalSourceLink').href = article.link;
-
-    document.getElementById('articleModal').classList.remove('hidden');
+async function logout() {
+  await supabaseClient.auth.signOut();
+  currentUser = null;
+  updateAuthUI();
 }
 
-function closeArticle() {
-    document.getElementById('articleModal').classList.add('hidden');
+// ================= التصنيفات =================
+async function loadCategories() {
+  const { data } = await supabaseClient.from("categories").select("*").order("id");
+  allCategories = data || [];
+  const nav = document.getElementById("categoryTabs");
+  nav.innerHTML = '<button class="active" onclick="filterCategory(\'all\')">الكل</button>' +
+    allCategories.map(c => `<button onclick="filterCategory(${c.id})">${c.name}</button>`).join("");
 }
 
 function filterCategory(cat) {
-    currentCategory = cat;
-    document.querySelectorAll('.categories button').forEach(btn => {
-        btn.classList.toggle('active', btn.innerText.includes(cat) || (cat === 'الكل' && btn.innerText === 'الكل'));
-    });
-    renderArticles();
+  currentCategory = cat;
+  document.querySelectorAll(".categories button").forEach(btn => btn.classList.remove("active"));
+  event.target.classList.add("active");
+  renderNovels();
 }
 
-document.getElementById('searchInput').addEventListener('input', renderArticles);
+// ================= الروايات =================
+async function loadNovels() {
+  const { data, error } = await supabaseClient
+    .from("novels")
+    .select("*, categories(name), chapters(count)")
+    .order("updated_at", { ascending: false });
+  if (error) {
+    document.getElementById("novelsGrid").innerHTML = `<p style="text-align:center;grid-column:1/-1;">تعذر تحميل الروايات</p>`;
+    return;
+  }
+  allNovels = data || [];
+  renderNovels();
+}
 
-loadNews();
+function renderNovels() {
+  const grid = document.getElementById("novelsGrid");
+  const term = document.getElementById("searchInput").value.toLowerCase();
+
+  const filtered = allNovels.filter(n => {
+    const matchesCat = currentCategory === "all" || n.category_id === currentCategory;
+    const matchesSearch = n.title.toLowerCase().includes(term) || (n.author || "").toLowerCase().includes(term);
+    return matchesCat && matchesSearch;
+  });
+
+  if (filtered.length === 0) {
+    grid.innerHTML = `<p style="text-align:center;grid-column:1/-1;padding:40px;">لا توجد روايات مطابقة بعد.</p>`;
+    return;
+  }
+
+  let html = "";
+  filtered.forEach((n, i) => {
+    const chCount = n.chapters?.[0]?.count || 0;
+    html += `
+      <article class="card" onclick="openNovel('${n.id}')">
+        <div class="card-img-wrapper">
+          <img src="${n.cover_url || 'https://via.placeholder.com/300x400?text=No+Cover'}" class="card-img" alt="${n.title}">
+        </div>
+        <div class="card-content">
+          <span class="tag">${n.categories?.name || ""}</span>
+          <h3>${n.title}</h3>
+          <p class="author">✍️ ${n.author || "غير معروف"}</p>
+          <div class="card-footer">
+            <span>${chCount} فصل</span>
+            <span>${n.status || ""}</span>
+          </div>
+        </div>
+      </article>`;
+    if ((i + 1) % 6 === 0) {
+      html += `<div class="ad-card"><span class="ad-tag">إعلان</span></div>`;
+    }
+  });
+  grid.innerHTML = html;
+}
+
+// ================= تفاصيل الرواية =================
+async function openNovel(id) {
+  currentNovel = allNovels.find(n => n.id === id);
+  if (!currentNovel) return;
+
+  document.getElementById("detailCover").src = currentNovel.cover_url || "https://via.placeholder.com/300x400?text=No+Cover";
+  document.getElementById("detailTitle").textContent = currentNovel.title;
+  document.getElementById("detailAuthor").textContent = "✍️ " + (currentNovel.author || "غير معروف");
+  document.getElementById("detailCategory").textContent = currentNovel.categories?.name || "";
+  document.getElementById("detailStatus").textContent = "الحالة: " + (currentNovel.status || "");
+  document.getElementById("detailDesc").textContent = currentNovel.description || "";
+
+  const { data: chapters } = await supabaseClient
+    .from("chapters").select("*").eq("novel_id", id).order("chapter_number");
+  currentChapters = chapters || [];
+
+  const list = document.getElementById("chaptersList");
+  list.innerHTML = currentChapters.length
+    ? currentChapters.map((c, i) => `
+        <div class="chapter-item" onclick="openChapter(${i})">
+          <span>الفصل ${c.chapter_number}: ${c.title}</span>
+          <span>➔</span>
+        </div>`).join("")
+    : `<p style="color:#94a3b8;">لا توجد فصول منشورة بعد.</p>`;
+
+  await updateFavButton();
+  document.getElementById("novelModal").classList.remove("hidden");
+}
+function closeNovel() { document.getElementById("novelModal").classList.add("hidden"); }
+
+// ================= المفضلة =================
+async function updateFavButton() {
+  const btn = document.getElementById("favBtn");
+  if (!currentUser) { btn.textContent = "☆ سجّل دخول لتفعيل المفضلة"; return; }
+  const { data } = await supabaseClient.from("favorites")
+    .select("*").eq("user_id", currentUser.id).eq("novel_id", currentNovel.id).maybeSingle();
+  btn.textContent = data ? "★ في المفضلة" : "☆ أضف للمفضلة";
+}
+
+async function toggleFavorite() {
+  if (!currentUser) { showAuth("login"); return; }
+  const { data } = await supabaseClient.from("favorites")
+    .select("*").eq("user_id", currentUser.id).eq("novel_id", currentNovel.id).maybeSingle();
+  if (data) {
+    await supabaseClient.from("favorites").delete().eq("user_id", currentUser.id).eq("novel_id", currentNovel.id);
+  } else {
+    await supabaseClient.from("favorites").insert({ user_id: currentUser.id, novel_id: currentNovel.id });
+  }
+  await updateFavButton();
+}
+
+// ================= القارئ =================
+async function openChapter(index) {
+  currentChIndex = index;
+  renderChapter();
+  document.getElementById("readerModal").classList.remove("hidden");
+  document.getElementById("novelModal").classList.add("hidden");
+
+  if (currentUser) {
+    await supabaseClient.from("reading_progress").upsert({
+      user_id: currentUser.id,
+      novel_id: currentNovel.id,
+      chapter_id: currentChapters[index].id,
+      updated_at: new Date().toISOString()
+    });
+  }
+}
+
+function renderChapter() {
+  const ch = currentChapters[currentChIndex];
+  document.getElementById("readerNovelTitle").textContent = currentNovel.title;
+  document.getElementById("readerChTitle").textContent = "الفصل " + ch.chapter_number + ": " + ch.title;
+  document.getElementById("readerChContent").textContent = ch.content;
+
+  const prevBtn = document.getElementById("prevChBtn");
+  const nextBtn = document.getElementById("nextChBtn");
+  prevBtn.classList.toggle("disabled", currentChIndex === 0);
+  prevBtn.onclick = currentChIndex > 0 ? () => { currentChIndex--; renderChapter(); } : null;
+  nextBtn.classList.toggle("disabled", currentChIndex === currentChapters.length - 1);
+  nextBtn.onclick = currentChIndex < currentChapters.length - 1 ? () => { currentChIndex++; renderChapter(); } : null;
+
+  document.querySelector(".reader-body").scrollTop = 0;
+}
+
+function closeReader() { document.getElementById("readerModal").classList.add("hidden"); }
+function setTheme(t) { document.getElementById("readerModal").className = "reader-modal " + t; }
+function changeFontSize(delta) {
+  currentFontSize = Math.min(28, Math.max(12, currentFontSize + delta));
+  document.getElementById("readerChContent").style.fontSize = currentFontSize + "px";
+}

@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>لوحة الإدارة | الجريدة الأدبية</title>
+<link rel="stylesheet" href="style.css">
+<style>
+  .admin-wrap { max-width:900px; margin:20px auto; padding:0 15px 60px; }
+  .admin-section { background:#111827; border:1px solid #334155; border-radius:12px; padding:20px; margin-bottom:25px; }
+  .admin-section h2 { color:#a78bfa; margin-bottom:15px; }
+  .admin-section textarea { width:100%; min-height:150px; padding:10px; background:#1e293b; border:1px solid #334155; color:white; border-radius:6px; margin-bottom:10px; resize:vertical; }
+  .admin-section select { width:100%; padding:10px; margin-bottom:10px; background:#1e293b; border:1px solid #334155; color:white; border-radius:6px; }
+  .admin-row { display:flex; justify-content:space-between; align-items:center; background:#1e293b; padding:10px 14px; border-radius:6px; margin-bottom:6px; border:1px solid #334155; }
+  .btn-danger { background:#dc2626; color:white; border:none; padding:6px 12px; border-radius:6px; cursor:pointer; font-size:0.8rem; }
+  #gate { text-align:center; padding:80px 20px; }
+</style>
+</head>
+<body>
+
+<div id="gate">
+  <h1 style="color:#a78bfa;">لوحة الإدارة</h1>
+  <p id="gateMsg" style="color:#94a3b8; margin:15px 0;">سجّل الدخول بحساب الأدمن للمتابعة</p>
+  <input type="text" id="gateUsername" placeholder="اسم المستخدم" style="padding:10px;border-radius:6px;border:1px solid #334155;background:#1e293b;color:white;margin-bottom:8px;display:block;width:250px;margin:8px auto;">
+  <input type="password" id="gateCode" placeholder="الكود السري" style="padding:10px;border-radius:6px;border:1px solid #334155;background:#1e293b;color:white;margin-bottom:8px;display:block;width:250px;margin:8px auto;">
+  <button class="btn-primary" onclick="gateLogin()">دخول</button>
+</div>
+
+<div id="adminPanel" class="admin-wrap hidden">
+  <h1 style="color:#a78bfa;">لوحة الإدارة</h1>
+  <p style="color:#4ade80;">مرحباً <span id="adminName"></span> — <a href="index.html" style="color:#a78bfa;">عرض الموقع</a></p>
+
+  <!-- إضافة رواية -->
+  <div class="admin-section">
+    <h2>➕ إضافة رواية جديدة</h2>
+    <input type="text" id="newTitle" placeholder="عنوان الرواية">
+    <input type="text" id="newAuthor" placeholder="اسم المؤلف">
+    <select id="newCategory"></select>
+    <input type="file" id="newCoverFile" accept="image/*" style="margin-bottom:10px;color:#94a3b8;">
+    <textarea id="newDesc" placeholder="وصف الرواية"></textarea>
+    <select id="newStatus">
+      <option>مستمرة</option>
+      <option>مكتملة</option>
+      <option>متوقفة</option>
+    </select>
+    <button class="btn-primary" onclick="addNovel()">حفظ الرواية</button>
+    <p id="novelMsg" style="color:#4ade80;margin-top:8px;"></p>
+  </div>
+
+  <!-- إدارة الروايات الموجودة -->
+  <div class="admin-section">
+    <h2>📚 الروايات الحالية</h2>
+    <div id="adminNovelsList"></div>
+  </div>
+
+  <!-- إضافة فصل -->
+  <div class="admin-section">
+    <h2>➕ إضافة فصل</h2>
+    <select id="chapterNovelSelect"></select>
+    <input type="number" id="chapterNumber" placeholder="رقم الفصل">
+    <input type="text" id="chapterTitle" placeholder="عنوان الفصل">
+    <textarea id="chapterContent" placeholder="نص الفصل كاملاً" style="min-height:250px;"></textarea>
+    <button class="btn-primary" onclick="addChapter()">نشر الفصل</button>
+    <p id="chapterMsg" style="color:#4ade80;margin-top:8px;"></p>
+  </div>
+
+  <!-- فصول الرواية المختارة -->
+  <div class="admin-section">
+    <h2>🗂️ فصول الرواية المختارة</h2>
+    <div id="adminChaptersList"></div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script>
+let admin = null;
+let categories = [];
+let novels = [];
+
+async function gateLogin() {
+  const username = document.getElementById("gateUsername").value.trim();
+  const code = document.getElementById("gateCode").value.trim();
+  const email = username.toLowerCase().replace(/[^a-z0-9]/g, "") + "@" + AUTH_DOMAIN;
+  const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password: code });
+  if (error) { document.getElementById("gateMsg").textContent = "بيانات الدخول غير صحيحة"; return; }
+
+  const { data: profile } = await supabaseClient.from("profiles").select("*").eq("id", data.user.id).single();
+  if (!profile || !profile.is_admin) {
+    document.getElementById("gateMsg").textContent = "هذا الحساب ليس لديه صلاحية إدارة";
+    await supabaseClient.auth.signOut();
+    return;
+  }
+  admin = profile;
+  document.getElementById("gate").classList.add("hidden");
+  document.getElementById("adminPanel").classList.remove("hidden");
+  document.getElementById("adminName").textContent = admin.username;
+  await loadCategories();
+  await loadNovelsAdmin();
+}
+
+async function loadCategories() {
+  const { data } = await supabaseClient.from("categories").select("*").order("id");
+  categories = data || [];
+  const opts = categories.map(c => `<option value="${c.id}">${c.name}</option>`).join("");
+  document.getElementById("newCategory").innerHTML = opts;
+}
+
+async function loadNovelsAdmin() {
+  const { data } = await supabaseClient.from("novels").select("*, categories(name)").order("created_at", { ascending: false });
+  novels = data || [];
+  document.getElementById("adminNovelsList").innerHTML = novels.map(n => `
+    <div class="admin-row">
+      <span>${n.title} — ${n.categories?.name || ""}</span>
+      <button class="btn-danger" onclick="deleteNovel('${n.id}')">حذف</button>
+    </div>`).join("") || "<p style='color:#94a3b8;'>لا توجد روايات بعد.</p>";
+
+  document.getElementById("chapterNovelSelect").innerHTML =
+    novels.map(n => `<option value="${n.id}">${n.title}</option>`).join("");
+
+  if (novels.length) loadChaptersAdmin(novels[0].id);
+  document.getElementById("chapterNovelSelect").onchange = (e) => loadChaptersAdmin(e.target.value);
+}
+
+async function deleteNovel(id) {
+  if (!confirm("متأكد من حذف هذه الرواية وكل فصولها؟")) return;
+  await supabaseClient.from("novels").delete().eq("id", id);
+  await loadNovelsAdmin();
+}
+
+async function addNovel() {
+  const title = document.getElementById("newTitle").value.trim();
+  const author = document.getElementById("newAuthor").value.trim();
+  const category_id = document.getElementById("newCategory").value;
+  const description = document.getElementById("newDesc").value.trim();
+  const status = document.getElementById("newStatus").value;
+  const fileInput = document.getElementById("newCoverFile");
+  const msg = document.getElementById("novelMsg");
+
+  if (!title) { msg.style.color = "#f87171"; msg.textContent = "العنوان مطلوب"; return; }
+
+  let cover_url = null;
+  if (fileInput.files.length) {
+    const file = fileInput.files[0];
+    const path = `${Date.now()}_${file.name}`;
+    const { error: upErr } = await supabaseClient.storage.from("covers").upload(path, file);
+    if (upErr) { msg.style.color = "#f87171"; msg.textContent = "فشل رفع الصورة: " + upErr.message; return; }
+    const { data: pub } = supabaseClient.storage.from("covers").getPublicUrl(path);
+    cover_url = pub.publicUrl;
+  }
+
+  const { error } = await supabaseClient.from("novels").insert({
+    title, author, category_id, description, status, cover_url
+  });
+  if (error) { msg.style.color = "#f87171"; msg.textContent = "خطأ: " + error.message; return; }
+
+  msg.style.color = "#4ade80";
+  msg.textContent = "تمت إضافة الرواية بنجاح ✅";
+  document.getElementById("newTitle").value = "";
+  document.getElementById("newAuthor").value = "";
+  document.getElementById("newDesc").value = "";
+  fileInput.value = "";
+  await loadNovelsAdmin();
+}
+
+async function loadChaptersAdmin(novelId) {
+  const { data } = await supabaseClient.from("chapters").select("*").eq("novel_id", novelId).order("chapter_number");
+  document.getElementById("adminChaptersList").innerHTML = (data || []).map(c => `
+    <div class="admin-row">
+      <span>الفصل ${c.chapter_number}: ${c.title}</span>
+      <button class="btn-danger" onclick="deleteChapter('${c.id}', '${novelId}')">حذف</button>
+    </div>`).join("") || "<p style='color:#94a3b8;'>لا توجد فصول لهذه الرواية.</p>";
+}
+
+async function deleteChapter(id, novelId) {
+  if (!confirm("حذف هذا الفصل؟")) return;
+  await supabaseClient.from("chapters").delete().eq("id", id);
+  await loadChaptersAdmin(novelId);
+}
+
+async function addChapter() {
+  const novel_id = document.getElementById("chapterNovelSelect").value;
+  const chapter_number = parseInt(document.getElementById("chapterNumber").value);
+  const title = document.getElementById("chapterTitle").value.trim();
+  const content = document.getElementById("chapterContent").value.trim();
+  const msg = document.getElementById("chapterMsg");
+
+  if (!novel_id || !chapter_number || !title || !content) {
+    msg.style.color = "#f87171"; msg.textContent = "الرجاء تعبئة كل الحقول"; return;
+  }
+
+  const { error } = await supabaseClient.from("chapters").insert({ novel_id, chapter_number, title, content });
+  if (error) { msg.style.color = "#f87171"; msg.textContent = "خطأ: " + error.message; return; }
+
+  msg.style.color = "#4ade80";
+  msg.textContent = "تم نشر الفصل ✅";
+  document.getElementById("chapterNumber").value = "";
+  document.getElementById("chapterTitle").value = "";
+  document.getElementById("chapterContent").value = "";
+  await loadChaptersAdmin(novel_id);
+  await loadNovelsAdmin();
+}
+</script>
+</body>
+</html>
