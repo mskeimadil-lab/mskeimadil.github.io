@@ -1,22 +1,34 @@
 let allNovels = [];
 let allCategories = [];
 let currentCategory = "all";
-let currentUser = null;   // { id, username, is_admin }
+let currentUser = null;
 let currentNovel = null;
 let currentChapters = [];
 let currentChIndex = 0;
 let currentFontSize = 16;
 let authMode = "login";
 
-// ================= تشغيل أولي =================
 document.addEventListener("DOMContentLoaded", async () => {
+  showSplashOnce();
   await checkSession();
   await loadCategories();
   await loadNovels();
   document.getElementById("searchInput").addEventListener("input", renderNovels);
 });
 
-// ================= المصادقة =================
+function showSplashOnce() {
+  const splash = document.getElementById("splashScreen");
+  if (sessionStorage.getItem("splashShown")) {
+    splash.remove();
+    return;
+  }
+  sessionStorage.setItem("splashShown", "1");
+  setTimeout(() => {
+    splash.classList.add("fade-out");
+    setTimeout(() => splash.remove(), 700);
+  }, 1400);
+}
+
 async function checkSession() {
   const { data: { session } } = await supabaseClient.auth.getSession();
   if (session) await loadProfile(session.user.id);
@@ -34,6 +46,8 @@ function updateAuthUI() {
   document.getElementById("loginBtn").classList.toggle("hidden", !!currentUser);
   document.getElementById("signupBtn").classList.toggle("hidden", !!currentUser);
   document.getElementById("logoutBtn").classList.toggle("hidden", !currentUser);
+  document.getElementById("adminLink").classList.toggle("hidden", !currentUser);
+  document.getElementById("settingsLink").classList.toggle("hidden", !currentUser);
   const badge = document.getElementById("userBadge");
   if (currentUser) {
     badge.textContent = "مرحباً، " + currentUser.username + (currentUser.is_admin ? " (أدمن)" : "");
@@ -79,7 +93,6 @@ async function logout() {
   updateAuthUI();
 }
 
-// ================= التصنيفات =================
 async function loadCategories() {
   const { data } = await supabaseClient.from("categories").select("*").order("id");
   allCategories = data || [];
@@ -95,7 +108,6 @@ function filterCategory(cat) {
   renderNovels();
 }
 
-// ================= الروايات =================
 async function loadNovels() {
   const { data, error } = await supabaseClient
     .from("novels")
@@ -149,7 +161,6 @@ function renderNovels() {
   grid.innerHTML = html;
 }
 
-// ================= تفاصيل الرواية =================
 async function openNovel(id) {
   currentNovel = allNovels.find(n => n.id === id);
   if (!currentNovel) return;
@@ -179,7 +190,6 @@ async function openNovel(id) {
 }
 function closeNovel() { document.getElementById("novelModal").classList.add("hidden"); }
 
-// ================= المفضلة =================
 async function updateFavButton() {
   const btn = document.getElementById("favBtn");
   if (!currentUser) { btn.textContent = "☆ سجّل دخول لتفعيل المفضلة"; return; }
@@ -200,7 +210,6 @@ async function toggleFavorite() {
   await updateFavButton();
 }
 
-// ================= القارئ =================
 async function openChapter(index) {
   currentChIndex = index;
   renderChapter();

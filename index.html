@@ -8,6 +8,12 @@
 </head>
 <body>
 
+  <!-- شاشة الترحيب الذهبية -->
+  <div id="splashScreen">
+    <div class="splash-title">📖 الجريدة الأدبية</div>
+    <div class="splash-sub">منصتك لقراءة ونشر الروايات</div>
+  </div>
+
   <header class="header">
     <div class="logo">
       <h1>📖 الجريدة الأدبية</h1>
@@ -17,6 +23,8 @@
       <button id="loginBtn" onclick="showAuth('login')">دخول</button>
       <button id="signupBtn" onclick="showAuth('signup')">حساب جديد</button>
       <span id="userBadge" class="hidden"></span>
+      <a id="adminLink" href="admin.html" class="hidden">لوحة الإدارة</a>
+      <a id="settingsLink" href="settings.html" class="hidden">الإعدادات</a>
       <button id="logoutBtn" class="hidden" onclick="logout()">خروج</button>
     </div>
   </header>
@@ -27,10 +35,8 @@
 
   <nav class="categories" id="categoryTabs">
     <button class="active" onclick="filterCategory('all')">الكل</button>
-    <!-- بقية التصنيفات تُبنى تلقائياً من قاعدة البيانات -->
   </nav>
 
-  <!-- إعلان Adsterra - نفس الكود الأصلي -->
   <div style="text-align:center; margin:15px auto; max-width:100%; overflow:hidden;">
     <script async data-cfasync="false" src="https://pl31174834.profitableratecpmnetwork.com/16862be26721288d37d8fc1d7d7cfba0/invoke.js"></script>
     <div id="container-16862be26721288d37d8fc1d7d7cfba0"></div>
@@ -42,7 +48,6 @@
     </div>
   </main>
 
-  <!-- نافذة تفاصيل الرواية -->
   <div id="novelModal" class="modal hidden">
     <div class="modal-content">
       <button class="close-btn" onclick="closeNovel()">×</button>
@@ -62,7 +67,6 @@
     </div>
   </div>
 
-  <!-- نافذة القراءة -->
   <div id="readerModal" class="reader-modal theme-dark hidden">
     <div class="reader-header">
       <span class="close-reader" onclick="closeReader()">×</span>
@@ -88,7 +92,6 @@
     </div>
   </div>
 
-  <!-- نافذة الدخول / إنشاء حساب -->
   <div id="authModal" class="modal hidden">
     <div class="modal-content" style="max-width:380px;">
       <button class="close-btn" onclick="closeAuth()">×</button>
