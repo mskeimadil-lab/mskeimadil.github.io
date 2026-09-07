@@ -175,9 +175,6 @@ html += `
 </div>
 </div>
 </article>`;
-if ((i + 1) % 6 === 0) {
-html += `<div class="ad-card"><span class="ad-tag">إعلان</span></div>`;
-}
 });
 grid.innerHTML = html;
 }
