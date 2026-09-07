@@ -30,7 +30,6 @@
   <h1 style="color:#a78bfa;">لوحة الإدارة</h1>
   <p style="color:#4ade80;">مرحباً <span id="adminName"></span> — <a href="index.html" style="color:#a78bfa;">عرض الموقع</a></p>
 
-  <!-- إضافة رواية -->
   <div class="admin-section">
     <h2>➕ إضافة رواية جديدة</h2>
     <input type="text" id="newTitle" placeholder="عنوان الرواية">
@@ -47,15 +46,24 @@
     <p id="novelMsg" style="color:#4ade80;margin-top:8px;"></p>
   </div>
 
-  <!-- إدارة الروايات الموجودة -->
   <div class="admin-section">
     <h2>📚 الروايات الحالية</h2>
     <div id="adminNovelsList"></div>
   </div>
 
-  <!-- إضافة فصل -->
   <div class="admin-section">
-    <h2>➕ إضافة فصل</h2>
+    <h2>📦 استيراد فصول بالجملة من ملف ZIP</h2>
+    <p style="color:#94a3b8; font-size:0.85rem; margin-bottom:10px;">
+      حضّر ملف ZIP فيه ملف نصي (.txt) لكل فصل، مسمّى بترتيب (مثلاً: 1.txt، 2.txt، 3.txt...). أول سطر بكل ملف يُستخدم كعنوان الفصل تلقائياً.
+    </p>
+    <select id="zipNovelSelect"></select>
+    <input type="file" id="zipFile" accept=".zip" style="margin-bottom:10px;color:#94a3b8;">
+    <button class="btn-primary" onclick="importZip()">استيراد الفصول من ZIP</button>
+    <p id="zipStatus" style="margin-top:8px;"></p>
+  </div>
+
+  <div class="admin-section">
+    <h2>➕ إضافة فصل يدوياً</h2>
     <select id="chapterNovelSelect"></select>
     <input type="number" id="chapterNumber" placeholder="رقم الفصل">
     <input type="text" id="chapterTitle" placeholder="عنوان الفصل">
@@ -64,7 +72,6 @@
     <p id="chapterMsg" style="color:#4ade80;margin-top:8px;"></p>
   </div>
 
-  <!-- فصول الرواية المختارة -->
   <div class="admin-section">
     <h2>🗂️ فصول الرواية المختارة</h2>
     <div id="adminChaptersList"></div>
@@ -72,6 +79,7 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 <script src="config.js"></script>
 <script>
 let admin = null;
@@ -119,9 +127,72 @@ async function loadNovelsAdmin() {
 
   document.getElementById("chapterNovelSelect").innerHTML =
     novels.map(n => `<option value="${n.id}">${n.title}</option>`).join("");
+  document.getElementById("zipNovelSelect").innerHTML =
+    novels.map(n => `<option value="${n.id}">${n.title}</option>`).join("");
 
   if (novels.length) loadChaptersAdmin(novels[0].id);
   document.getElementById("chapterNovelSelect").onchange = (e) => loadChaptersAdmin(e.target.value);
+}
+
+function naturalCompare(a, b) {
+  const ax = a.match(/\d+/g)?.map(Number) || [];
+  const bx = b.match(/\d+/g)?.map(Number) || [];
+  for (let i = 0; i < Math.max(ax.length, bx.length); i++) {
+    const diff = (ax[i] || 0) - (bx[i] || 0);
+    if (diff !== 0) return diff;
+  }
+  return a.localeCompare(b);
+}
+
+async function importZip() {
+  const novel_id = document.getElementById("zipNovelSelect").value;
+  const fileInput = document.getElementById("zipFile");
+  const status = document.getElementById("zipStatus");
+
+  if (!novel_id) { status.style.color = "#f87171"; status.textContent = "اختر رواية أولاً"; return; }
+  if (!fileInput.files.length) { status.style.color = "#f87171"; status.textContent = "اختر ملف ZIP أولاً"; return; }
+
+  status.style.color = "#a78bfa";
+  status.textContent = "جاري قراءة الملف...";
+
+  try {
+    const zip = await JSZip.loadAsync(fileInput.files[0]);
+    let entries = Object.values(zip.files).filter(f => !f.dir && f.name.toLowerCase().endsWith(".txt"));
+    entries.sort((a, b) => naturalCompare(a.name, b.name));
+
+    if (!entries.length) {
+      status.style.color = "#f87171";
+      status.textContent = "لم يتم العثور على ملفات .txt داخل ZIP";
+      return;
+    }
+
+    const chaptersToInsert = [];
+    for (let i = 0; i < entries.length; i++) {
+      const text = await entries[i].async("string");
+      const lines = text.split(/\r?\n/);
+      let title = (lines[0] || "").trim();
+      let content = lines.slice(1).join("\n").trim();
+      if (!title || !content) { title = "الفصل " + (i + 1); content = text.trim(); }
+
+      const numMatch = entries[i].name.match(/\d+/);
+      const chapter_number = numMatch ? parseInt(numMatch[0]) : (i + 1);
+
+      chaptersToInsert.push({ novel_id, chapter_number, title, content });
+    }
+
+    status.textContent = `جاري رفع ${chaptersToInsert.length} فصل...`;
+    const { error } = await supabaseClient.from("chapters").insert(chaptersToInsert);
+    if (error) { status.style.color = "#f87171"; status.textContent = "خطأ: " + error.message; return; }
+
+    status.style.color = "#4ade80";
+    status.textContent = `✅ تم استيراد ${chaptersToInsert.length} فصل بنجاح`;
+    fileInput.value = "";
+    await loadChaptersAdmin(novel_id);
+    await loadNovelsAdmin();
+  } catch (e) {
+    status.style.color = "#f87171";
+    status.textContent = "خطأ في قراءة الملف: " + e.message;
+  }
 }
 
 async function deleteNovel(id) {

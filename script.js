@@ -150,7 +150,7 @@ function renderNovels() {
           <p class="author">✍️ ${n.author || "غير معروف"}</p>
           <div class="card-footer">
             <span>${chCount} فصل</span>
-            <span>${n.status || ""}</span>
+            <span>👁 ${n.views || 0}</span>
           </div>
         </div>
       </article>`;
@@ -165,11 +165,15 @@ async function openNovel(id) {
   currentNovel = allNovels.find(n => n.id === id);
   if (!currentNovel) return;
 
+  supabaseClient.rpc('increment_views', { target_id: id });
+
   document.getElementById("detailCover").src = currentNovel.cover_url || "https://via.placeholder.com/300x400?text=No+Cover";
   document.getElementById("detailTitle").textContent = currentNovel.title;
   document.getElementById("detailAuthor").textContent = "✍️ " + (currentNovel.author || "غير معروف");
   document.getElementById("detailCategory").textContent = currentNovel.categories?.name || "";
-  document.getElementById("detailStatus").textContent = "الحالة: " + (currentNovel.status || "");
+  document.getElementById("detailStatus").textContent = "الحالة: " + (currentNovel.status || "") +
+    "  |  👁 " + (currentNovel.views || 0) + " مشاهدة" +
+    "  |  📅 نُشرت: " + (currentNovel.created_at ? currentNovel.created_at.slice(0,10) : "");
   document.getElementById("detailDesc").textContent = currentNovel.description || "";
 
   const { data: chapters } = await supabaseClient
