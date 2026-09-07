@@ -7,108 +7,102 @@
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-
-  <!-- شاشة الترحيب الذهبية -->
-  <div id="splashScreen">
-    <div class="splash-title">📖 الجريدة الأدبية</div>
-    <div class="splash-sub">منصتك لقراءة ونشر الروايات</div>
-  </div>
-
-  <header class="header">
-    <div class="logo">
-      <h1>📖 الجريدة الأدبية</h1>
-      <p>منصتك لقراءة ونشر الروايات</p>
-    </div>
-    <div id="authBox" class="auth-box">
-      <button id="loginBtn" onclick="showAuth('login')">دخول</button>
-      <button id="signupBtn" onclick="showAuth('signup')">حساب جديد</button>
-      <span id="userBadge" class="hidden"></span>
-      <a id="adminLink" href="admin.html" class="hidden">لوحة الإدارة</a>
-      <a id="settingsLink" href="settings.html" class="hidden">الإعدادات</a>
-      <button id="logoutBtn" class="hidden" onclick="logout()">خروج</button>
-    </div>
-  </header>
-
-  <div class="search-bar">
-    <input type="text" id="searchInput" placeholder="🔍 ابحث عن رواية أو مؤلف...">
-  </div>
-
-  <nav class="categories" id="categoryTabs">
-    <button class="active" onclick="filterCategory('all')">الكل</button>
-  </nav>
-
-  <div style="text-align:center; margin:15px auto; max-width:100%; overflow:hidden;">
-    <script async data-cfasync="false" src="https://pl31174834.profitableratecpmnetwork.com/16862be26721288d37d8fc1d7d7cfba0/invoke.js"></script>
-    <div id="container-16862be26721288d37d8fc1d7d7cfba0"></div>
-  </div>
-
-  <main class="container">
-    <div id="novelsGrid" class="news-grid">
-      <p style="text-align:center; grid-column:1/-1; padding:40px;">جاري تحميل الروايات...</p>
-    </div>
-  </main>
-
-  <div id="novelModal" class="modal hidden">
-    <div class="modal-content">
-      <button class="close-btn" onclick="closeNovel()">×</button>
-      <div class="novel-header">
-        <img id="detailCover" class="detail-cover" src="" alt="غلاف">
-        <div class="novel-info">
-          <h2 id="detailTitle"></h2>
-          <p id="detailAuthor"></p>
-          <p id="detailCategory" class="tag"></p>
-          <p id="detailStatus"></p>
-          <button id="favBtn" class="btn-primary" onclick="toggleFavorite()">☆ أضف للمفضلة</button>
-        </div>
-      </div>
-      <p id="detailDesc" class="article-text"></p>
-      <h3>الفصول</h3>
-      <div id="chaptersList"></div>
-    </div>
-  </div>
-
-  <div id="readerModal" class="reader-modal theme-dark hidden">
-    <div class="reader-header">
-      <span class="close-reader" onclick="closeReader()">×</span>
-      <span id="readerNovelTitle" style="font-size:12px;font-weight:bold;color:#8b5cf6;"></span>
-    </div>
-    <div class="reader-toolbar">
-      <span>اللون:</span>
-      <span class="color-dot dot-dark" onclick="setTheme('theme-dark')"></span>
-      <span class="color-dot dot-yellow" onclick="setTheme('theme-yellow')"></span>
-      <span class="color-dot dot-light" onclick="setTheme('theme-light')"></span>
-      <span style="color:#555;">|</span>
-      <button class="tool-btn" onclick="changeFontSize(2)">+ خط</button>
-      <button class="tool-btn" onclick="changeFontSize(-2)">- خط</button>
-    </div>
-    <div class="reader-body">
-      <h2 id="readerChTitle" class="reader-ch-title"></h2>
-      <div id="readerChContent" class="reader-text"></div>
-    </div>
-    <div class="reader-footer">
-      <button id="prevChBtn" class="nav-btn">➡️ السابق</button>
-      <button class="nav-btn index-btn" onclick="closeReader()">📋 الفهرس</button>
-      <button id="nextChBtn" class="nav-btn">التالي ⬅️</button>
-    </div>
-  </div>
-
-  <div id="authModal" class="modal hidden">
-    <div class="modal-content" style="max-width:380px;">
-      <button class="close-btn" onclick="closeAuth()">×</button>
-      <h2 id="authTitle">دخول</h2>
-      <input type="text" id="authUsername" placeholder="اسم المستخدم">
-      <input type="password" id="authCode" placeholder="الكود السري">
-      <button class="btn-primary" onclick="submitAuth()" style="width:100%;margin-top:10px;">تأكيد</button>
-      <p id="authMsg" style="color:#f87171;font-size:0.85rem;"></p>
-    </div>
-  </div>
-
-  <footer>
-    <p>© الجريدة الأدبية — منصة روايات</p>
-  </footer>
-
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="config.js"></script>
-  <script src="script.js"></script>
+<!-- شاشة الترحيب -->
+<div id="splashScreen">
+<div class="splash-title">📖 الجريدة الأدبية</div>
+<div class="splash-sub">منصتك لقراءة ونشر الروايات</div>
+</div>
+<header class="header">
+<div class="logo">
+<h1>📖 الجريدة الأدبية</h1>
+<p>منصتك لقراءة ونشر الروايات</p>
+</div>
+<div id="authBox" class="auth-box">
+<button id="loginBtn" onclick="showAuth('login')">دخول</button>
+<button id="signupBtn" onclick="showAuth('signup')">حساب جديد</button>
+<span id="userBadge" class="hidden"></span>
+<a id="adminLink" href="admin.html" class="hidden">لوحة الإدارة</a>
+<a id="settingsLink" href="settings.html" class="hidden">الإعدادات</a>
+<button id="logoutBtn" class="hidden" onclick="logout()">خروج</button>
+</div>
+</header>
+<div class="search-bar">
+<input type="text" id="searchInput" placeholder="🔍 ابحث عن رواية أو مؤلف...">
+</div>
+<div id="bannerWrap" class="banner-wrap hidden">
+<div id="bannerTrack" class="banner-track"></div>
+<div id="bannerDots" class="banner-dots"></div>
+</div>
+<nav class="categories" id="categoryTabs">
+<button class="active" onclick="filterCategory('all')">الكل</button>
+<button onclick="filterCategory('trending')">🔥 الأكثر رواجاً</button>
+</nav>
+<div style="text-align:center; margin:15px auto; max-width:100%; overflow:hidden;">
+<script async data-cfasync="false" src="https://pl31174834.profitableratecpmnetwork.com/16862be26721288d37d8fc1d7d7cfba0/invoke.js"></script>
+<div id="container-16862be26721288d37d8fc1d7d7cfba0"></div>
+</div>
+<main class="container">
+<div id="novelsGrid" class="news-grid">
+<p style="text-align:center; grid-column:1/-1; padding:40px;">جاري تحميل الروايات...</p>
+</div>
+</main>
+<div id="novelModal" class="modal hidden">
+<div class="modal-content">
+<button class="close-btn" onclick="closeNovel()">×</button>
+<div class="novel-header">
+<img id="detailCover" class="detail-cover" src="" alt="غلاف">
+<div class="novel-info">
+<h2 id="detailTitle"></h2>
+<p id="detailAuthor"></p>
+<p id="detailCategory" class="tag"></p>
+<p id="detailStatus"></p>
+<button id="favBtn" class="btn-primary" onclick="toggleFavorite()">☆ أضف للمفضلة</button>
+</div>
+</div>
+<p id="detailDesc" class="article-text"></p>
+<h3>الفصول</h3>
+<div id="chaptersList"></div>
+</div>
+</div>
+<div id="readerModal" class="reader-modal theme-dark hidden">
+<div class="reader-header">
+<span class="close-reader" onclick="closeReader()">×</span>
+<span id="readerNovelTitle" style="font-size:12px;font-weight:bold;color:#8b5cf6;"></span>
+</div>
+<div class="reader-toolbar">
+<span>اللون:</span>
+<span class="color-dot dot-dark" onclick="setTheme('theme-dark')"></span>
+<span class="color-dot dot-yellow" onclick="setTheme('theme-yellow')"></span>
+<span class="color-dot dot-light" onclick="setTheme('theme-light')"></span>
+<span style="color:#555;">|</span>
+<button class="tool-btn" onclick="changeFontSize(2)">+ خط</button>
+<button class="tool-btn" onclick="changeFontSize(-2)">- خط</button>
+</div>
+<div class="reader-body">
+<h2 id="readerChTitle" class="reader-ch-title"></h2>
+<div id="readerChContent" class="reader-text"></div>
+</div>
+<div class="reader-footer">
+<button id="prevChBtn" class="nav-btn">➡️ السابق</button>
+<button class="nav-btn index-btn" onclick="closeReader()">📋 الفهرس</button>
+<button id="nextChBtn" class="nav-btn">التالي ⬅️</button>
+</div>
+</div>
+<div id="authModal" class="modal hidden">
+<div class="modal-content" style="max-width:380px;">
+<button class="close-btn" onclick="closeAuth()">×</button>
+<h2 id="authTitle">دخول</h2>
+<input type="text" id="authUsername" placeholder="اسم المستخدم">
+<input type="password" id="authCode" placeholder="الكود السري">
+<button class="btn-primary" onclick="submitAuth()" style="width:100%;margin-top:10px;">تأكيد</button>
+<p id="authMsg" style="color:#f87171;font-size:0.85rem;"></p>
+</div>
+</div>
+<footer>
+<p>© الجريدة الأدبية — منصة روايات</p>
+</footer>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script src="script.js"></script>
 </body>
 </html>
