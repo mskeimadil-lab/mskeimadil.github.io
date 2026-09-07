@@ -374,7 +374,8 @@ function setTheme(t) {
 currentTheme = t;
 const modal = document.getElementById("readerModal");
 const wasFocus = modal.classList.contains("focus-mode");
-modal.className = "reader-modal " + t + (wasFocus ? " focus-mode" : "");
+const wasHidden = modal.classList.contains("hidden");
+modal.className = "reader-modal " + t + (wasFocus ? " focus-mode" : "") + (wasHidden ? " hidden" : "");
 localStorage.setItem("reader_theme", t);
 }
 function changeFontSize(delta) {
