@@ -14,13 +14,22 @@
   .admin-row { display:flex; justify-content:space-between; align-items:center; background:#1e293b; padding:10px 14px; border-radius:6px; margin-bottom:6px; border:1px solid #334155; }
   .btn-danger { background:#dc2626; color:white; border:none; padding:6px 12px; border-radius:6px; cursor:pointer; font-size:0.8rem; }
   #gate { text-align:center; padding:80px 20px; }
+  .tab-bar { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:20px; }
+  .tab-bar button { background:#1e293b; color:#94a3b8; border:1px solid #334155; padding:8px 16px; border-radius:20px; cursor:pointer; }
+  .tab-bar button.active { background:#7c3aed; color:white; border-color:#7c3aed; }
+  .report-row { background:#1e293b; border:1px solid #334155; border-radius:8px; padding:12px 14px; margin-bottom:8px; }
+  .report-row.open { border-right:3px solid #f87171; }
+  .report-row.resolved { border-right:3px solid #4ade80; opacity:0.6; }
+  .report-meta { color:#64748b; font-size:0.75rem; margin-top:6px; }
+  .report-reason { color:#fbbf24; font-weight:bold; font-size:0.85rem; }
+  .report-note { color:#cbd5e1; font-size:0.85rem; margin-top:4px; }
 </style>
 </head>
 <body>
 
 <div id="gate">
   <h1 style="color:#a78bfa;">لوحة الإدارة</h1>
-  <p id="gateMsg" style="color:#94a3b8; margin:15px 0;">سجّل الدخول بحساب الأدمن للمتابعة</p>
+  <p id="gateMsg" style="color:#94a3b8; margin:15px 0;">هذا القسم مخصص فقط لمدير الموقع</p>
   <input type="text" id="gateUsername" placeholder="اسم المستخدم" style="padding:10px;border-radius:6px;border:1px solid #334155;background:#1e293b;color:white;margin-bottom:8px;display:block;width:250px;margin:8px auto;">
   <input type="password" id="gateCode" placeholder="الكود السري" style="padding:10px;border-radius:6px;border:1px solid #334155;background:#1e293b;color:white;margin-bottom:8px;display:block;width:250px;margin:8px auto;">
   <button class="btn-primary" onclick="gateLogin()">دخول</button>
@@ -28,7 +37,7 @@
 
 <div id="adminPanel" class="admin-wrap hidden">
   <h1 style="color:#a78bfa;">لوحة الإدارة</h1>
-  <p style="color:#4ade80;">مرحباً <span id="adminName"></span> — <a href="index.html" style="color:#a78bfa;">عرض الموقع</a></p>
+  <p style="color:#4ade80;">مرحباً، <span id="adminName"></span> — <a href="index.html" style="color:#a78bfa;">عودة للموقع</a></p>
 
   <div class="admin-section">
     <h2>➕ إضافة رواية جديدة</h2>
@@ -38,27 +47,27 @@
     <input type="file" id="newCoverFile" accept="image/*" style="margin-bottom:10px;color:#94a3b8;">
     <textarea id="newDesc" placeholder="وصف الرواية"></textarea>
     <select id="newStatus">
-      <option>مستمرة</option>
-      <option>مكتملة</option>
-      <option>متوقفة</option>
+      <option value="مستمر">مستمر</option>
+      <option value="مكتمل">مكتمل</option>
+      <option value="متوقف">متوقف</option>
     </select>
-    <button class="btn-primary" onclick="addNovel()">حفظ الرواية</button>
+    <button class="btn-primary" onclick="addNovel()">إضافة الرواية</button>
     <p id="novelMsg" style="color:#4ade80;margin-top:8px;"></p>
   </div>
 
   <div class="admin-section">
-    <h2>📚 الروايات الحالية</h2>
+    <h2>📚 كل الروايات</h2>
     <div id="adminNovelsList"></div>
   </div>
 
   <div class="admin-section">
-    <h2>📦 استيراد فصول بالجملة من ملف ZIP</h2>
+    <h2>📦 رفع فصول بالجملة من ملف ZIP</h2>
     <p style="color:#94a3b8; font-size:0.85rem; margin-bottom:10px;">
-      حضّر ملف ZIP فيه ملف نصي (.txt) لكل فصل، مسمّى بترتيب (مثلاً: 1.txt، 2.txt، 3.txt...). أول سطر بكل ملف يُستخدم كعنوان الفصل تلقائياً.
+      كل ملف نصي (.txt) داخل الـZIP يمثل فصل، وتُرتَّب حسب الاسم رقمياً (1.txt، 2.txt، 3.txt...)، السطر الأول من كل ملف يُستخدم كعنوان الفصل والباقي محتوى.
     </p>
     <select id="zipNovelSelect"></select>
     <input type="file" id="zipFile" accept=".zip" style="margin-bottom:10px;color:#94a3b8;">
-    <button class="btn-primary" onclick="importZip()">استيراد الفصول من ZIP</button>
+    <button class="btn-primary" onclick="importZip()">استيراد من ZIP</button>
     <p id="zipStatus" style="margin-top:8px;"></p>
   </div>
 
@@ -67,15 +76,26 @@
     <select id="chapterNovelSelect"></select>
     <input type="number" id="chapterNumber" placeholder="رقم الفصل">
     <input type="text" id="chapterTitle" placeholder="عنوان الفصل">
-    <textarea id="chapterContent" placeholder="نص الفصل كاملاً" style="min-height:250px;"></textarea>
-    <button class="btn-primary" onclick="addChapter()">نشر الفصل</button>
+    <textarea id="chapterContent" placeholder="محتوى الفصل" style="min-height:250px;"></textarea>
+    <button class="btn-primary" onclick="addChapter()">إضافة الفصل</button>
     <p id="chapterMsg" style="color:#4ade80;margin-top:8px;"></p>
   </div>
 
   <div class="admin-section">
-    <h2>🗂️ فصول الرواية المختارة</h2>
+    <h2>📑 فصول الرواية المختارة</h2>
     <div id="adminChaptersList"></div>
   </div>
+
+  <div class="admin-section">
+    <h2>🚩 البلاغات</h2>
+    <div class="tab-bar">
+      <button id="reportsOpenTab" class="active" onclick="filterReports('open')">مفتوحة</button>
+      <button id="reportsResolvedTab" onclick="filterReports('resolved')">تم الحل</button>
+      <button id="reportsAllTab" onclick="filterReports('all')">الكل</button>
+    </div>
+    <div id="reportsList"></div>
+  </div>
+
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -83,8 +103,8 @@
 <script src="config.js"></script>
 <script>
 let admin = null;
-let categories = [];
 let novels = [];
+let categories = [];
 
 async function gateLogin() {
   const username = document.getElementById("gateUsername").value.trim();
@@ -92,19 +112,19 @@ async function gateLogin() {
   const email = username.toLowerCase().replace(/[^a-z0-9]/g, "") + "@" + AUTH_DOMAIN;
   const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password: code });
   if (error) { document.getElementById("gateMsg").textContent = "بيانات الدخول غير صحيحة"; return; }
-
   const { data: profile } = await supabaseClient.from("profiles").select("*").eq("id", data.user.id).single();
-  if (!profile) {
-    document.getElementById("gateMsg").textContent = "تعذر تحميل بيانات الحساب";
+  if (!profile || !profile.is_admin) {
+    document.getElementById("gateMsg").textContent = "هذا الحساب ليس لديه صلاحيات إدارة";
     await supabaseClient.auth.signOut();
     return;
   }
   admin = profile;
   document.getElementById("gate").classList.add("hidden");
   document.getElementById("adminPanel").classList.remove("hidden");
-  document.getElementById("adminName").textContent = admin.username + (admin.is_admin ? " (أدمن)" : " (كاتب)");
+  document.getElementById("adminName").textContent = admin.username + (admin.is_admin ? " (أدمن)" : "");
   await loadCategories();
   await loadNovelsAdmin();
+  await loadReports();
 }
 
 async function loadCategories() {
@@ -124,12 +144,10 @@ async function loadNovelsAdmin() {
       <span>${n.title} — ${n.categories?.name || ""}</span>
       <button class="btn-danger" onclick="deleteNovel('${n.id}')">حذف</button>
     </div>`).join("") || "<p style='color:#94a3b8;'>لا توجد روايات بعد.</p>";
-
   document.getElementById("chapterNovelSelect").innerHTML =
     novels.map(n => `<option value="${n.id}">${n.title}</option>`).join("");
   document.getElementById("zipNovelSelect").innerHTML =
     novels.map(n => `<option value="${n.id}">${n.title}</option>`).join("");
-
   if (novels.length) loadChaptersAdmin(novels[0].id);
   document.getElementById("chapterNovelSelect").onchange = (e) => loadChaptersAdmin(e.target.value);
 }
@@ -148,7 +166,6 @@ async function importZip() {
   const novel_id = document.getElementById("zipNovelSelect").value;
   const fileInput = document.getElementById("zipFile");
   const status = document.getElementById("zipStatus");
-
   if (!novel_id) { status.style.color = "#f87171"; status.textContent = "اختر رواية أولاً"; return; }
   if (!fileInput.files.length) { status.style.color = "#f87171"; status.textContent = "اختر ملف ZIP أولاً"; return; }
 
@@ -159,10 +176,9 @@ async function importZip() {
     const zip = await JSZip.loadAsync(fileInput.files[0]);
     let entries = Object.values(zip.files).filter(f => !f.dir && f.name.toLowerCase().endsWith(".txt"));
     entries.sort((a, b) => naturalCompare(a.name, b.name));
-
     if (!entries.length) {
       status.style.color = "#f87171";
-      status.textContent = "لم يتم العثور على ملفات .txt داخل ZIP";
+      status.textContent = "ما فيه ملفات txt داخل ZIP";
       return;
     }
 
@@ -185,18 +201,18 @@ async function importZip() {
     if (error) { status.style.color = "#f87171"; status.textContent = "خطأ: " + error.message; return; }
 
     status.style.color = "#4ade80";
-    status.textContent = `✅ تم استيراد ${chaptersToInsert.length} فصل بنجاح`;
+    status.textContent = `✅ تم رفع ${chaptersToInsert.length} فصل بنجاح`;
     fileInput.value = "";
     await loadChaptersAdmin(novel_id);
     await loadNovelsAdmin();
   } catch (e) {
     status.style.color = "#f87171";
-    status.textContent = "خطأ في قراءة الملف: " + e.message;
+    status.textContent = "فشل قراءة الملف: " + e.message;
   }
 }
 
 async function deleteNovel(id) {
-  if (!confirm("متأكد من حذف هذه الرواية وكل فصولها؟")) return;
+  if (!confirm("متأكد من حذف الرواية وكل فصولها؟")) return;
   await supabaseClient.from("novels").delete().eq("id", id);
   await loadNovelsAdmin();
 }
@@ -210,14 +226,14 @@ async function addNovel() {
   const fileInput = document.getElementById("newCoverFile");
   const msg = document.getElementById("novelMsg");
 
-  if (!title) { msg.style.color = "#f87171"; msg.textContent = "العنوان مطلوب"; return; }
+  if (!title) { msg.style.color = "#f87171"; msg.textContent = "لازم تكتب عنوان"; return; }
 
   let cover_url = null;
   if (fileInput.files.length) {
     const file = fileInput.files[0];
     const path = `${Date.now()}_${file.name}`;
     const { error: upErr } = await supabaseClient.storage.from("covers").upload(path, file);
-    if (upErr) { msg.style.color = "#f87171"; msg.textContent = "فشل رفع الصورة: " + upErr.message; return; }
+    if (upErr) { msg.style.color = "#f87171"; msg.textContent = "خطأ رفع الغلاف: " + upErr.message; return; }
     const { data: pub } = supabaseClient.storage.from("covers").getPublicUrl(path);
     cover_url = pub.publicUrl;
   }
@@ -228,7 +244,7 @@ async function addNovel() {
   if (error) { msg.style.color = "#f87171"; msg.textContent = "خطأ: " + error.message; return; }
 
   msg.style.color = "#4ade80";
-  msg.textContent = "تمت إضافة الرواية بنجاح ✅";
+  msg.textContent = "✅ تمت إضافة الرواية بنجاح";
   document.getElementById("newTitle").value = "";
   document.getElementById("newAuthor").value = "";
   document.getElementById("newDesc").value = "";
@@ -242,11 +258,11 @@ async function loadChaptersAdmin(novelId) {
     <div class="admin-row">
       <span>الفصل ${c.chapter_number}: ${c.title}</span>
       <button class="btn-danger" onclick="deleteChapter('${c.id}', '${novelId}')">حذف</button>
-    </div>`).join("") || "<p style='color:#94a3b8;'>لا توجد فصول لهذه الرواية.</p>";
+    </div>`).join("") || "<p style='color:#94a3b8;'>لا توجد فصول لهذه الرواية بعد.</p>";
 }
 
 async function deleteChapter(id, novelId) {
-  if (!confirm("حذف هذا الفصل؟")) return;
+  if (!confirm("متأكد من حذف الفصل؟")) return;
   await supabaseClient.from("chapters").delete().eq("id", id);
   await loadChaptersAdmin(novelId);
 }
@@ -266,12 +282,56 @@ async function addChapter() {
   if (error) { msg.style.color = "#f87171"; msg.textContent = "خطأ: " + error.message; return; }
 
   msg.style.color = "#4ade80";
-  msg.textContent = "تم نشر الفصل ✅";
+  msg.textContent = "✅ تم نشر الفصل";
   document.getElementById("chapterNumber").value = "";
   document.getElementById("chapterTitle").value = "";
   document.getElementById("chapterContent").value = "";
   await loadChaptersAdmin(novel_id);
   await loadNovelsAdmin();
+}
+
+let allReports = [];
+let reportsFilter = "open";
+async function loadReports() {
+  const { data, error } = await supabaseClient
+    .from("reports")
+    .select("*, novels(title), chapters(chapter_number, title)")
+    .order("created_at", { ascending: false });
+  if (error) {
+    document.getElementById("reportsList").innerHTML = "<p style='color:#f87171;'>تعذر تحميل البلاغات</p>";
+    return;
+  }
+  allReports = data || [];
+  renderReports();
+}
+function filterReports(f) {
+  reportsFilter = f;
+  document.getElementById("reportsOpenTab").classList.toggle("active", f === "open");
+  document.getElementById("reportsResolvedTab").classList.toggle("active", f === "resolved");
+  document.getElementById("reportsAllTab").classList.toggle("active", f === "all");
+  renderReports();
+}
+function renderReports() {
+  const list = reportsFilter === "all" ? allReports : allReports.filter(r => r.status === reportsFilter);
+  document.getElementById("reportsList").innerHTML = list.length
+    ? list.map(r => `
+      <div class="report-row ${r.status}">
+        <div class="report-reason">${r.reason}</div>
+        ${r.note ? `<div class="report-note">${r.note}</div>` : ""}
+        <div class="report-meta">
+          📖 ${r.novels?.title || "رواية محذوفة"} — الفصل ${r.chapters?.chapter_number ?? "؟"}: ${r.chapters?.title || ""}<br>
+          👤 ${r.username || "مجهول"} · ${r.created_at ? r.created_at.slice(0,16).replace("T"," ") : ""}
+        </div>
+        <button class="btn-primary" style="margin-top:8px;font-size:0.75rem;padding:4px 10px;" onclick="toggleReportStatus('${r.id}', '${r.status}')">
+          ${r.status === "open" ? "✔ وسمها كمحلولة" : "↩ إعادة فتحها"}
+        </button>
+      </div>`).join("")
+    : "<p style='color:#94a3b8;'>لا توجد بلاغات هنا.</p>";
+}
+async function toggleReportStatus(id, currentStatus) {
+  const newStatus = currentStatus === "open" ? "resolved" : "open";
+  await supabaseClient.from("reports").update({ status: newStatus }).eq("id", id);
+  await loadReports();
 }
 </script>
 </body>
