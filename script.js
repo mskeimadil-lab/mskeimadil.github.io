@@ -6,6 +6,10 @@ let currentNovel = null;
 let currentChapters = [];
 let currentChIndex = 0;
 let currentFontSize = 16;
+let currentLineHeight = 2.2;
+let currentTheme = "theme-dark";
+const marginWidths = [600, 750, 950];
+let currentMarginIndex = 1;
 let authMode = "login";
 document.addEventListener("DOMContentLoaded", async () => {
 showSplashOnce();
@@ -13,7 +17,28 @@ await checkSession();
 await loadCategories();
 await loadNovels();
 document.getElementById("searchInput").addEventListener("input", renderNovels);
+loadReaderPrefs();
+document.getElementById("readerBody").addEventListener("scroll", onReaderScroll);
 });
+function loadReaderPrefs() {
+const savedTheme = localStorage.getItem("reader_theme");
+if (savedTheme) setTheme(savedTheme);
+const savedFont = localStorage.getItem("reader_font_size");
+if (savedFont) {
+currentFontSize = parseInt(savedFont);
+document.getElementById("readerChContent").style.fontSize = currentFontSize + "px";
+}
+const savedLH = localStorage.getItem("reader_line_height");
+if (savedLH) {
+currentLineHeight = parseFloat(savedLH);
+document.getElementById("readerChContent").style.lineHeight = currentLineHeight;
+}
+const savedMargin = localStorage.getItem("reader_margin_index");
+if (savedMargin !== null && marginWidths[savedMargin]) {
+currentMarginIndex = parseInt(savedMargin);
+document.getElementById("readerBody").style.maxWidth = marginWidths[currentMarginIndex] + "px";
+}
+}
 function showSplashOnce() {
 const splash = document.getElementById("splashScreen");
 if (sessionStorage.getItem("splashShown")) {
@@ -248,11 +273,56 @@ prevBtn.classList.toggle("disabled", currentChIndex === 0);
 prevBtn.onclick = currentChIndex > 0 ? () => { currentChIndex--; renderChapter(); } : null;
 nextBtn.classList.toggle("disabled", currentChIndex === currentChapters.length - 1);
 nextBtn.onclick = currentChIndex < currentChapters.length - 1 ? () => { currentChIndex++; renderChapter(); } : null;
-document.querySelector(".reader-body").scrollTop = 0;
+const readerBody = document.getElementById("readerBody");
+const savedPos = localStorage.getItem("read_pos_" + ch.id);
+requestAnimationFrame(() => {
+if (savedPos && parseFloat(savedPos) > 0.01) {
+const max = readerBody.scrollHeight - readerBody.clientHeight;
+readerBody.scrollTop = max * parseFloat(savedPos);
+} else {
+readerBody.scrollTop = 0;
+}
+onReaderScroll();
+});
+}
+function onReaderScroll() {
+const el = document.getElementById("readerBody");
+const max = el.scrollHeight - el.clientHeight;
+const percent = max > 0 ? Math.min(1, el.scrollTop / max) : 0;
+const bar = document.getElementById("readerProgressBar");
+if (bar) bar.style.width = (percent * 100) + "%";
+if (currentChapters.length && currentChapters[currentChIndex]) {
+localStorage.setItem("read_pos_" + currentChapters[currentChIndex].id, percent.toFixed(4));
+}
 }
 function closeReader() { document.getElementById("readerModal").classList.add("hidden"); }
-function setTheme(t) { document.getElementById("readerModal").className = "reader-modal " + t; }
+function setTheme(t) {
+currentTheme = t;
+const modal = document.getElementById("readerModal");
+const wasFocus = modal.classList.contains("focus-mode");
+modal.className = "reader-modal " + t + (wasFocus ? " focus-mode" : "");
+localStorage.setItem("reader_theme", t);
+}
 function changeFontSize(delta) {
 currentFontSize = Math.min(28, Math.max(12, currentFontSize + delta));
 document.getElementById("readerChContent").style.fontSize = currentFontSize + "px";
+localStorage.setItem("reader_font_size", currentFontSize);
+}
+function changeLineHeight(delta) {
+currentLineHeight = Math.min(3.0, Math.max(1.4, +(currentLineHeight + delta).toFixed(1)));
+document.getElementById("readerChContent").style.lineHeight = currentLineHeight;
+localStorage.setItem("reader_line_height", currentLineHeight);
+}
+function cycleMargin() {
+currentMarginIndex = (currentMarginIndex + 1) % marginWidths.length;
+document.getElementById("readerBody").style.maxWidth = marginWidths[currentMarginIndex] + "px";
+localStorage.setItem("reader_margin_index", currentMarginIndex);
+}
+function toggleFocusMode() {
+document.getElementById("readerModal").classList.toggle("focus-mode");
+}
+function handleReaderTap(event) {
+if (event.target.closest(".reader-ad") || event.target.closest(".reader-toolbar")) return;
+if (window.getSelection().toString().length > 0) return;
+toggleFocusMode();
 }

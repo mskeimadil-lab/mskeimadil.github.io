@@ -61,20 +61,27 @@
 </div>
 </div>
 <div id="readerModal" class="reader-modal theme-dark hidden">
+<div id="readerProgress" class="reader-progress"><div id="readerProgressBar" class="reader-progress-bar"></div></div>
 <div class="reader-header">
 <span class="close-reader" onclick="closeReader()">×</span>
 <span id="readerNovelTitle" style="font-size:12px;font-weight:bold;color:#8b5cf6;"></span>
+<span class="focus-hint" onclick="toggleFocusMode()">⛶</span>
 </div>
 <div class="reader-toolbar">
 <span>اللون:</span>
 <span class="color-dot dot-dark" onclick="setTheme('theme-dark')"></span>
 <span class="color-dot dot-yellow" onclick="setTheme('theme-yellow')"></span>
 <span class="color-dot dot-light" onclick="setTheme('theme-light')"></span>
+<span class="color-dot dot-sepia" onclick="setTheme('theme-sepia')"></span>
+<span class="color-dot dot-nightblue" onclick="setTheme('theme-nightblue')"></span>
 <span style="color:#555;">|</span>
 <button class="tool-btn" onclick="changeFontSize(2)">+ خط</button>
 <button class="tool-btn" onclick="changeFontSize(-2)">- خط</button>
+<button class="tool-btn" onclick="changeLineHeight(0.2)">+ تباعد</button>
+<button class="tool-btn" onclick="changeLineHeight(-0.2)">- تباعد</button>
+<button class="tool-btn" onclick="cycleMargin()">↔ الهامش</button>
 </div>
-<div class="reader-body">
+<div class="reader-body" id="readerBody" onclick="handleReaderTap(event)">
 <h2 id="readerChTitle" class="reader-ch-title"></h2>
 <div id="readerChContent" class="reader-text"></div>
 <div class="reader-ad">

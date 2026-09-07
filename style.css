@@ -57,13 +57,17 @@ animation:cardNeon 6s ease-in-out infinite;
 .btn-primary:hover { background:#6d28d9; }
 .modal-content input { width:100%; padding:10px; margin-bottom:10px; background:#1e293b; border:1px solid #334155; color:white; border-radius:6px; }
 .reader-modal { position:fixed; inset:0; z-index:9999; display:flex; flex-direction:column; }
-.reader-header { display:flex; justify-content:space-between; align-items:center; padding:12px 15px; background:#141414; border-bottom:1px solid #282828; }
+.reader-progress { position:relative; height:3px; width:100%; background:rgba(148,163,184,0.15); flex-shrink:0; }
+.reader-progress-bar { height:100%; width:0%; background:#a78bfa; box-shadow:0 0 6px #a78bfa; transition:width 0.1s linear; }
+.reader-header { display:flex; justify-content:space-between; align-items:center; padding:12px 15px; background:#141414; border-bottom:1px solid #282828; transition:opacity 0.25s ease, max-height 0.25s ease; }
 .close-reader { color:#a78bfa; font-size:24px; cursor:pointer; font-weight:bold; }
-.reader-toolbar { display:flex; justify-content:center; align-items:center; gap:8px; background:#1a1a1a; padding:8px; border-bottom:1px solid #282828; flex-wrap:wrap; }
+.focus-hint { color:#64748b; font-size:16px; cursor:pointer; }
+.reader-toolbar { display:flex; justify-content:center; align-items:center; gap:8px; background:#1a1a1a; padding:8px; border-bottom:1px solid #282828; flex-wrap:wrap; transition:opacity 0.25s ease, max-height 0.25s ease; }
 .tool-btn { background:#262626; color:#fff; border:1px solid #444; padding:4px 10px; border-radius:4px; font-size:11px; cursor:pointer; }
 .color-dot { width:18px; height:18px; border-radius:50%; cursor:pointer; display:inline-block; border:1px solid #fff; }
 .dot-dark { background:#0d0d0d; } .dot-yellow { background:#fbf0d9; } .dot-light { background:#ffffff; }
-.reader-body { flex:1; padding:20px; overflow-y:auto; max-width:750px; margin:0 auto; width:100%; }
+.dot-sepia { background:#e8d9b5; } .dot-nightblue { background:#0f1a2e; }
+.reader-body { flex:1; padding:20px; overflow-y:auto; max-width:750px; margin:0 auto; width:100%; transition:max-width 0.2s ease; }
 .reader-ad { margin:30px auto 10px; padding:12px; max-width:400px; text-align:center; border-top:1px solid rgba(148,163,184,0.2); border-bottom:1px solid rgba(148,163,184,0.2); }
 .reader-ad-label { display:block; color:#64748b; font-size:0.65rem; margin-bottom:8px; letter-spacing:1px; }
 .reader-ch-title { font-size:18px; color:#a78bfa; border-bottom:1px solid #333; padding-bottom:8px; margin-bottom:15px; }
@@ -71,13 +75,19 @@ animation:cardNeon 6s ease-in-out infinite;
 .theme-dark { background-color:#0d0d0d !important; color:#e0e0e0 !important; }
 .theme-yellow { background-color:#fbf0d9 !important; color:#222 !important; }
 .theme-light { background-color:#ffffff !important; color:#111 !important; }
-.theme-yellow .reader-ch-title, .theme-light .reader-ch-title { color:#b58900 !important; border-color:#ccc !important; }
+.theme-sepia { background-color:#e8d9b5 !important; color:#3a2e10 !important; }
+.theme-nightblue { background-color:#0f1a2e !important; color:#c7d6f0 !important; }
+.theme-yellow .reader-ch-title, .theme-light .reader-ch-title, .theme-sepia .reader-ch-title { color:#b58900 !important; border-color:#ccc !important; }
+.theme-nightblue .reader-ch-title { color:#7ea6e0 !important; border-color:#28405f !important; }
 .theme-dark .reader-text { color:#e0e0e0 !important; }
 .theme-yellow .reader-text { color:#3a2e10 !important; }
 .theme-light .reader-text { color:#111111 !important; }
-.reader-footer { display:flex; justify-content:space-between; padding:12px; background:#141414; border-top:1px solid #282828; gap:10px; }
+.theme-sepia .reader-text { color:#3a2e10 !important; }
+.theme-nightblue .reader-text { color:#c7d6f0 !important; }
+.reader-footer { display:flex; justify-content:space-between; padding:12px; background:#141414; border-top:1px solid #282828; gap:10px; transition:opacity 0.25s ease, max-height 0.25s ease; }
 .nav-btn { flex:1; background:#222; color:#a78bfa; border:1px solid #a78bfa; padding:10px; font-size:12px; font-weight:bold; border-radius:6px; cursor:pointer; }
 .nav-btn.disabled { opacity:0.3; border-color:#444; color:#666; cursor:not-allowed; }
+.focus-mode .reader-header, .focus-mode .reader-toolbar, .focus-mode .reader-footer, .focus-mode .reader-progress { opacity:0; max-height:0; padding:0; overflow:hidden; border:none; pointer-events:none; }
 .index-btn { background:#333; color:#fff; border-color:#555; }
 footer { text-align:center; color:#64748b; font-size:0.85rem; padding:25px 0; }
 #splashScreen { position:fixed; inset:0; z-index:99999; display:flex; flex-direction:column; align-items:center; justify-content:center; transition:opacity 0.6s ease; overflow:hidden;
