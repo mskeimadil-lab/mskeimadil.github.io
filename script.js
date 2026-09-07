@@ -227,7 +227,30 @@ list.innerHTML = currentChapters.length
 </div>`).join("")
 : `<p style="color:#94a3b8;">لا توجد فصول منشورة بعد.</p>`;
 await updateFavButton();
+await loadRatings();
 document.getElementById("novelModal").classList.remove("hidden");
+}
+async function loadRatings() {
+const { data } = await supabaseClient.from("ratings").select("stars, user_id").eq("novel_id", currentNovel.id);
+const ratings = data || [];
+const avg = ratings.length ? ratings.reduce((s, r) => s + r.stars, 0) / ratings.length : 0;
+const full = Math.round(avg);
+document.getElementById("ratingAvg").textContent = "★".repeat(full) + "☆".repeat(5 - full) + " (" + ratings.length + ")";
+let myRating = 0;
+if (currentUser) {
+const mine = ratings.find(r => r.user_id === currentUser.id);
+if (mine) myRating = mine.stars;
+}
+document.querySelectorAll("#ratingStars .star").forEach(el => {
+el.classList.toggle("active", parseInt(el.dataset.star) <= myRating);
+});
+}
+async function submitRating(stars) {
+if (!currentUser) { showAuth("login"); return; }
+await supabaseClient.from("ratings").upsert({
+novel_id: currentNovel.id, user_id: currentUser.id, stars
+}, { onConflict: "novel_id,user_id" });
+await loadRatings();
 }
 function closeNovel() { document.getElementById("novelModal").classList.add("hidden"); }
 async function updateFavButton() {
@@ -284,6 +307,57 @@ readerBody.scrollTop = 0;
 }
 onReaderScroll();
 });
+loadComments(ch.id);
+document.getElementById("commentForm").classList.toggle("hidden", !currentUser);
+document.getElementById("commentLoginMsg").classList.toggle("hidden", !!currentUser);
+}
+async function loadComments(chapterId) {
+const { data } = await supabaseClient.from("comments").select("*").eq("chapter_id", chapterId).order("created_at", { ascending: false });
+const list = document.getElementById("commentsList");
+const comments = data || [];
+list.innerHTML = comments.length
+? comments.map(c => `
+<div class="comment-item">
+<span class="comment-author">${c.username}</span>
+<span class="comment-date">${c.created_at ? c.created_at.slice(0,10) : ""}</span>
+<div class="comment-content"></div>
+</div>`).join("")
+: `<p class="comment-empty">لا توجد تعليقات بعد — كن أول من يعلّق!</p>`;
+list.querySelectorAll(".comment-content").forEach((el, i) => { el.textContent = comments[i].content; });
+document.getElementById("commentInput").value = "";
+}
+async function submitComment() {
+if (!currentUser) { showAuth("login"); return; }
+const input = document.getElementById("commentInput");
+const content = input.value.trim();
+if (!content) return;
+const ch = currentChapters[currentChIndex];
+await supabaseClient.from("comments").insert({
+chapter_id: ch.id, novel_id: currentNovel.id, user_id: currentUser.id,
+username: currentUser.username, content
+});
+await loadComments(ch.id);
+}
+function openReportModal() {
+if (!currentUser) { showAuth("login"); return; }
+document.getElementById("reportMsg").textContent = "";
+document.getElementById("reportNote").value = "";
+document.getElementById("reportModal").classList.remove("hidden");
+}
+function closeReportModal() { document.getElementById("reportModal").classList.add("hidden"); }
+async function submitReport() {
+const reason = document.getElementById("reportReason").value;
+const note = document.getElementById("reportNote").value.trim();
+const ch = currentChapters[currentChIndex];
+const msg = document.getElementById("reportMsg");
+const { error } = await supabaseClient.from("reports").insert({
+chapter_id: ch.id, novel_id: currentNovel.id, user_id: currentUser.id,
+username: currentUser.username, reason, note: note || null
+});
+if (error) { msg.style.color = "#f87171"; msg.textContent = "تعذر إرسال البلاغ، حاول مرة ثانية"; return; }
+msg.style.color = "#4ade80";
+msg.textContent = "تم إرسال البلاغ، شكراً لك";
+setTimeout(closeReportModal, 1200);
 }
 function onReaderScroll() {
 const el = document.getElementById("readerBody");

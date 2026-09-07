@@ -53,6 +53,15 @@
 <p id="detailCategory" class="tag"></p>
 <p id="detailStatus"></p>
 <button id="favBtn" class="btn-primary" onclick="toggleFavorite()">☆ أضف للمفضلة</button>
+<div class="rating-block">
+<span id="ratingAvg" class="rating-avg">☆☆☆☆☆ (0)</span>
+<div class="rating-input">
+<span>قيّمها:</span>
+<span id="ratingStars" class="rating-stars">
+<span class="star" data-star="1" onclick="submitRating(1)">★</span><span class="star" data-star="2" onclick="submitRating(2)">★</span><span class="star" data-star="3" onclick="submitRating(3)">★</span><span class="star" data-star="4" onclick="submitRating(4)">★</span><span class="star" data-star="5" onclick="submitRating(5)">★</span>
+</span>
+</div>
+</div>
 </div>
 </div>
 <p id="detailDesc" class="article-text"></p>
@@ -65,7 +74,10 @@
 <div class="reader-header">
 <span class="close-reader" onclick="closeReader()">×</span>
 <span id="readerNovelTitle" style="font-size:12px;font-weight:bold;color:#8b5cf6;"></span>
+<span>
+<span class="report-hint" onclick="openReportModal()">🚩</span>
 <span class="focus-hint" onclick="toggleFocusMode()">⛶</span>
+</span>
 </div>
 <div class="reader-toolbar">
 <span>اللون:</span>
@@ -89,6 +101,15 @@
 <script async data-cfasync="false" src="https://pl31174834.profitableratecpmnetwork.com/16862be26721288d37d8fc1d7d7cfba0/invoke.js"></script>
 <div id="container-16862be26721288d37d8fc1d7d7cfba0"></div>
 </div>
+<div class="comments-section">
+<h3 class="comments-title">💬 التعليقات</h3>
+<div id="commentForm" class="comment-form hidden">
+<textarea id="commentInput" placeholder="اكتب تعليقك على هذا الفصل..."></textarea>
+<button class="btn-primary" onclick="submitComment()">نشر التعليق</button>
+</div>
+<p id="commentLoginMsg" class="comment-login-msg hidden">سجّل دخول عشان تقدر تعلّق.</p>
+<div id="commentsList" class="comments-list"></div>
+</div>
 </div>
 <div class="reader-footer">
 <button id="prevChBtn" class="nav-btn">➡️ السابق</button>
@@ -104,6 +125,22 @@
 <input type="password" id="authCode" placeholder="الكود السري">
 <button class="btn-primary" onclick="submitAuth()" style="width:100%;margin-top:10px;">تأكيد</button>
 <p id="authMsg" style="color:#f87171;font-size:0.85rem;"></p>
+</div>
+</div>
+<div id="reportModal" class="modal hidden">
+<div class="modal-content" style="max-width:380px;">
+<button class="close-btn" onclick="closeReportModal()">×</button>
+<h2>الإبلاغ عن مشكلة بالفصل</h2>
+<select id="reportReason">
+<option value="الفصل لا يعمل أو فاضي">الفصل لا يعمل / فاضي</option>
+<option value="خطأ إملائي أو ترجمة">خطأ إملائي أو ترجمة</option>
+<option value="محتوى غير لائق">محتوى غير لائق</option>
+<option value="ترتيب الفصول خاطئ">ترتيب الفصول خاطئ</option>
+<option value="غير ذلك">غير ذلك</option>
+</select>
+<textarea id="reportNote" placeholder="تفاصيل إضافية (اختياري)"></textarea>
+<button class="btn-primary" onclick="submitReport()" style="width:100%;margin-top:10px;">إرسال البلاغ</button>
+<p id="reportMsg" style="font-size:0.85rem;"></p>
 </div>
 </div>
 <footer>

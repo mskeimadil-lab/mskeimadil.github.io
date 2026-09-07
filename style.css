@@ -55,7 +55,24 @@ animation:cardNeon 6s ease-in-out infinite;
 .chapter-item:hover { border-color:#a78bfa; }
 .btn-primary { background:#7c3aed; color:white; border:none; padding:8px 18px; border-radius:6px; cursor:pointer; font-weight:bold; }
 .btn-primary:hover { background:#6d28d9; }
-.modal-content input { width:100%; padding:10px; margin-bottom:10px; background:#1e293b; border:1px solid #334155; color:white; border-radius:6px; }
+.modal-content input, .modal-content textarea, .modal-content select { width:100%; padding:10px; margin-bottom:10px; background:#1e293b; border:1px solid #334155; color:white; border-radius:6px; font-family:inherit; font-size:0.9rem; }
+.modal-content textarea { resize:vertical; min-height:70px; }
+.rating-block { margin-top:12px; padding-top:10px; border-top:1px solid #334155; }
+.rating-avg { color:#fbbf24; font-size:0.9rem; display:block; margin-bottom:6px; }
+.rating-input { display:flex; align-items:center; gap:8px; font-size:0.85rem; color:#94a3b8; }
+.rating-stars .star { font-size:22px; color:#334155; cursor:pointer; transition:color 0.15s; }
+.rating-stars .star:hover, .rating-stars .star.active { color:#fbbf24; }
+.report-hint { color:#f87171; font-size:15px; cursor:pointer; margin-left:10px; }
+.comments-section { margin-top:30px; padding-top:15px; border-top:1px solid #333; }
+.comments-title { font-size:16px; color:#a78bfa; margin-bottom:12px; }
+.comment-form textarea { width:100%; min-height:60px; padding:10px; background:#1e293b; border:1px solid #334155; color:#e0e0e0; border-radius:6px; margin-bottom:8px; font-family:inherit; resize:vertical; }
+.comment-login-msg { color:#64748b; font-size:0.85rem; margin-bottom:10px; }
+.comments-list { margin-top:15px; display:flex; flex-direction:column; gap:10px; }
+.comment-item { background:#1a1a1a; border:1px solid #282828; border-radius:8px; padding:10px 12px; }
+.comment-author { color:#a78bfa; font-size:0.8rem; font-weight:bold; }
+.comment-date { color:#64748b; font-size:0.7rem; margin-right:8px; }
+.comment-content { color:#cbd5e1; font-size:0.85rem; margin-top:4px; line-height:1.6; white-space:pre-wrap; }
+.comment-empty { color:#64748b; font-size:0.85rem; text-align:center; padding:10px; }
 .reader-modal { position:fixed; inset:0; z-index:9999; display:flex; flex-direction:column; }
 .reader-progress { position:relative; height:3px; width:100%; background:rgba(148,163,184,0.15); flex-shrink:0; }
 .reader-progress-bar { height:100%; width:0%; background:#a78bfa; box-shadow:0 0 6px #a78bfa; transition:width 0.1s linear; }
