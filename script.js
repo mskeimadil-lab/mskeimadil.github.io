@@ -208,7 +208,11 @@ grid.innerHTML = html;
 async function openNovel(id) {
 currentNovel = allNovels.find(n => n.id === id);
 if (!currentNovel) return;
+const viewedKey = "viewed_" + id;
+if (!sessionStorage.getItem(viewedKey)) {
+sessionStorage.setItem(viewedKey, "1");
 supabaseClient.rpc('increment_views', { target_id: id });
+}
 document.getElementById("detailCover").src = currentNovel.cover_url || "https://via.placeholder.com/300x400?text=No+Cover";
 document.getElementById("detailTitle").textContent = currentNovel.title;
 document.getElementById("detailAuthor").textContent = "✍️ " + (currentNovel.author || "غير معروف");
