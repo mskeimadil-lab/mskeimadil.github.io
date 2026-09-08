@@ -253,7 +253,7 @@ async function addNovel() {
 }
 
 async function loadChaptersAdmin(novelId) {
-  const { data } = await supabaseClient.from("chapters").select("*").eq("novel_id", novelId).order("chapter_number");
+  const { data } = await supabaseClient.from("chapters").select("id, chapter_number, title").eq("novel_id", novelId).order("chapter_number");
   document.getElementById("adminChaptersList").innerHTML = (data || []).map(c => `
     <div class="admin-row">
       <span>الفصل ${c.chapter_number}: ${c.title}</span>
