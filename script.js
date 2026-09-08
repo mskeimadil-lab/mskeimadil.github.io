@@ -216,7 +216,7 @@ document.getElementById("detailStatus").textContent = "الحالة: " + (curren
 "  |  📅 نُشرت: " + (currentNovel.created_at ? currentNovel.created_at.slice(0,10) : "");
 document.getElementById("detailDesc").textContent = currentNovel.description || "";
 const { data: chapters } = await supabaseClient
-.from("chapters").select("*").eq("novel_id", id).order("chapter_number");
+.from("chapters").select("id, chapter_number, title").eq("novel_id", id).order("chapter_number");
 currentChapters = chapters || [];
 const list = document.getElementById("chaptersList");
 list.innerHTML = currentChapters.length
@@ -273,7 +273,7 @@ await updateFavButton();
 }
 async function openChapter(index) {
 currentChIndex = index;
-renderChapter();
+await renderChapter();
 document.getElementById("readerModal").classList.remove("hidden");
 document.getElementById("novelModal").classList.add("hidden");
 if (currentUser) {
@@ -285,10 +285,15 @@ updated_at: new Date().toISOString()
 });
 }
 }
-function renderChapter() {
+async function renderChapter() {
 const ch = currentChapters[currentChIndex];
 document.getElementById("readerNovelTitle").textContent = currentNovel.title;
 document.getElementById("readerChTitle").textContent = "الفصل " + ch.chapter_number + ": " + ch.title;
+if (ch.content === undefined) {
+document.getElementById("readerChContent").textContent = "جاري تحميل الفصل...";
+const { data, error } = await supabaseClient.from("chapters").select("content").eq("id", ch.id).single();
+ch.content = error || !data ? "" : data.content;
+}
 document.getElementById("readerChContent").textContent = ch.content;
 const prevBtn = document.getElementById("prevChBtn");
 const nextBtn = document.getElementById("nextChBtn");
