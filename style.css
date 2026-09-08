@@ -53,6 +53,9 @@ animation:cardNeon 6s ease-in-out infinite;
 .article-text { font-size:0.95rem; line-height:1.8; color:#cbd5e1; margin:20px 0; white-space:pre-wrap; }
 .chapter-item { display:flex; justify-content:space-between; align-items:center; padding:10px 14px; background:#1e293b; margin-bottom:6px; border-radius:6px; border:1px solid #334155; cursor:pointer; }
 .chapter-item:hover { border-color:#a78bfa; }
+.chapters-pagination { display:flex; flex-wrap:wrap; gap:6px; margin-top:12px; justify-content:center; }
+.page-btn { background:#1e293b; color:#94a3b8; border:1px solid #334155; padding:6px 12px; border-radius:6px; cursor:pointer; font-size:0.8rem; min-width:34px; }
+.page-btn.active { background:#7c3aed; color:white; border-color:#7c3aed; }
 .btn-primary { background:#7c3aed; color:white; border:none; padding:8px 18px; border-radius:6px; cursor:pointer; font-weight:bold; }
 .btn-primary:hover { background:#6d28d9; }
 .modal-content input, .modal-content textarea, .modal-content select { width:100%; padding:10px; margin-bottom:10px; background:#1e293b; border:1px solid #334155; color:white; border-radius:6px; font-family:inherit; font-size:0.9rem; }

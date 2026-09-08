@@ -3,8 +3,10 @@ let allCategories = [];
 let currentCategory = "all";
 let currentUser = null;
 let currentNovel = null;
-let currentChapters = [];
-let currentChIndex = 0;
+let currentChapter = null;
+let chaptersPage = 1;
+const CHAPTERS_PER_PAGE = 50;
+let chaptersTotalCount = 0;
 let currentFontSize = 16;
 let currentLineHeight = 2.2;
 let currentTheme = "theme-dark";
@@ -215,17 +217,7 @@ document.getElementById("detailStatus").textContent = "الحالة: " + (curren
 "  |  👁 " + (currentNovel.views || 0) + " مشاهدة" +
 "  |  📅 نُشرت: " + (currentNovel.created_at ? currentNovel.created_at.slice(0,10) : "");
 document.getElementById("detailDesc").textContent = currentNovel.description || "";
-const { data: chapters } = await supabaseClient
-.from("chapters").select("id, chapter_number, title").eq("novel_id", id).order("chapter_number");
-currentChapters = chapters || [];
-const list = document.getElementById("chaptersList");
-list.innerHTML = currentChapters.length
-? currentChapters.map((c, i) => `
-<div class="chapter-item" onclick="openChapter(${i})">
-<span>الفصل ${c.chapter_number}: ${c.title}</span>
-<span>➔</span>
-</div>`).join("")
-: `<p style="color:#94a3b8;">لا توجد فصول منشورة بعد.</p>`;
+await loadChaptersPage(1);
 await updateFavButton();
 await loadRatings();
 document.getElementById("novelModal").classList.remove("hidden");
@@ -271,36 +263,77 @@ await supabaseClient.from("favorites").insert({ user_id: currentUser.id, novel_i
 }
 await updateFavButton();
 }
-async function openChapter(index) {
-currentChIndex = index;
-await renderChapter();
+async function loadChaptersPage(page) {
+chaptersPage = page;
+const from = (page - 1) * CHAPTERS_PER_PAGE;
+const to = from + CHAPTERS_PER_PAGE - 1;
+const { data, count } = await supabaseClient
+.from("chapters")
+.select("id, chapter_number, title", { count: "exact" })
+.eq("novel_id", currentNovel.id)
+.order("chapter_number")
+.range(from, to);
+chaptersTotalCount = count || 0;
+const pageChapters = data || [];
+const list = document.getElementById("chaptersList");
+list.innerHTML = pageChapters.length
+? pageChapters.map(c => `
+<div class="chapter-item" onclick="openChapterByNumber(${c.chapter_number})">
+<span>الفصل ${c.chapter_number}: ${c.title}</span>
+<span>➔</span>
+</div>`).join("")
+: `<p style="color:#94a3b8;">لا توجد فصول منشورة بعد.</p>`;
+renderChaptersPagination();
+}
+function renderChaptersPagination() {
+const wrap = document.getElementById("chaptersPagination");
+if (!wrap) return;
+const totalPages = Math.ceil(chaptersTotalCount / CHAPTERS_PER_PAGE);
+if (totalPages <= 1) { wrap.innerHTML = ""; return; }
+let html = "";
+for (let p = 1; p <= totalPages; p++) {
+html += `<button class="page-btn${p === chaptersPage ? ' active' : ''}" onclick="loadChaptersPage(${p})">${p}</button>`;
+}
+wrap.innerHTML = html;
+}
+async function openChapterByNumber(chapterNumber) {
 document.getElementById("readerModal").classList.remove("hidden");
 document.getElementById("novelModal").classList.add("hidden");
-if (currentUser) {
+await loadChapterByNumber(chapterNumber);
+if (currentUser && currentChapter) {
 await supabaseClient.from("reading_progress").upsert({
 user_id: currentUser.id,
 novel_id: currentNovel.id,
-chapter_id: currentChapters[index].id,
+chapter_id: currentChapter.id,
 updated_at: new Date().toISOString()
 });
 }
 }
-async function renderChapter() {
-const ch = currentChapters[currentChIndex];
+async function loadChapterByNumber(chapterNumber) {
+document.getElementById("readerNovelTitle").textContent = currentNovel.title;
+document.getElementById("readerChTitle").textContent = "جاري التحميل...";
+document.getElementById("readerChContent").textContent = "";
+const { data, error } = await supabaseClient
+.from("chapters").select("id, chapter_number, title, content")
+.eq("novel_id", currentNovel.id).eq("chapter_number", chapterNumber).single();
+if (error || !data) {
+document.getElementById("readerChTitle").textContent = "تعذر تحميل هذا الفصل";
+return;
+}
+currentChapter = data;
+renderChapter();
+}
+function renderChapter() {
+const ch = currentChapter;
 document.getElementById("readerNovelTitle").textContent = currentNovel.title;
 document.getElementById("readerChTitle").textContent = "الفصل " + ch.chapter_number + ": " + ch.title;
-if (ch.content === undefined) {
-document.getElementById("readerChContent").textContent = "جاري تحميل الفصل...";
-const { data, error } = await supabaseClient.from("chapters").select("content").eq("id", ch.id).single();
-ch.content = error || !data ? "" : data.content;
-}
 document.getElementById("readerChContent").textContent = ch.content;
 const prevBtn = document.getElementById("prevChBtn");
 const nextBtn = document.getElementById("nextChBtn");
-prevBtn.classList.toggle("disabled", currentChIndex === 0);
-prevBtn.onclick = currentChIndex > 0 ? () => { currentChIndex--; renderChapter(); } : null;
-nextBtn.classList.toggle("disabled", currentChIndex === currentChapters.length - 1);
-nextBtn.onclick = currentChIndex < currentChapters.length - 1 ? () => { currentChIndex++; renderChapter(); } : null;
+prevBtn.classList.toggle("disabled", ch.chapter_number <= 1);
+prevBtn.onclick = ch.chapter_number > 1 ? () => loadChapterByNumber(ch.chapter_number - 1) : null;
+nextBtn.classList.toggle("disabled", ch.chapter_number >= chaptersTotalCount);
+nextBtn.onclick = ch.chapter_number < chaptersTotalCount ? () => loadChapterByNumber(ch.chapter_number + 1) : null;
 const readerBody = document.getElementById("readerBody");
 const savedPos = localStorage.getItem("read_pos_" + ch.id);
 requestAnimationFrame(() => {
@@ -336,7 +369,7 @@ if (!currentUser) { showAuth("login"); return; }
 const input = document.getElementById("commentInput");
 const content = input.value.trim();
 if (!content) return;
-const ch = currentChapters[currentChIndex];
+const ch = currentChapter;
 await supabaseClient.from("comments").insert({
 chapter_id: ch.id, novel_id: currentNovel.id, user_id: currentUser.id,
 username: currentUser.username, content
@@ -353,7 +386,7 @@ function closeReportModal() { document.getElementById("reportModal").classList.a
 async function submitReport() {
 const reason = document.getElementById("reportReason").value;
 const note = document.getElementById("reportNote").value.trim();
-const ch = currentChapters[currentChIndex];
+const ch = currentChapter;
 const msg = document.getElementById("reportMsg");
 const { error } = await supabaseClient.from("reports").insert({
 chapter_id: ch.id, novel_id: currentNovel.id, user_id: currentUser.id,
@@ -370,8 +403,8 @@ const max = el.scrollHeight - el.clientHeight;
 const percent = max > 0 ? Math.min(1, el.scrollTop / max) : 0;
 const bar = document.getElementById("readerProgressBar");
 if (bar) bar.style.width = (percent * 100) + "%";
-if (currentChapters.length && currentChapters[currentChIndex]) {
-localStorage.setItem("read_pos_" + currentChapters[currentChIndex].id, percent.toFixed(4));
+if (currentChapter) {
+localStorage.setItem("read_pos_" + currentChapter.id, percent.toFixed(4));
 }
 }
 function closeReader() { document.getElementById("readerModal").classList.add("hidden"); }
