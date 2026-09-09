@@ -192,3 +192,6 @@ animation:nebulaDrift 50s ease-in-out infinite alternate;
 @media (prefers-reduced-motion: reduce) {
 body, .header, .header h1, .categories button.active, .banner-track, .card { animation:none !important; }
 }
+
+.news-bell { position:relative; padding:6px 10px !important; font-size:1rem !important; }
+.news-dot { position:absolute; top:2px; left:2px; width:9px; height:9px; border-radius:50%; background:#f87171; box-shadow:0 0 6px #f87171; }

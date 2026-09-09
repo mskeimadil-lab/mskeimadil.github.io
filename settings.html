@@ -7,87 +7,106 @@
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-
 <header class="header">
-  <div class="logo">
-    <h1>📖 الجريدة الأدبية</h1>
-    <p>الإعدادات الشخصية</p>
-  </div>
-  <div class="auth-box">
-    <a href="index.html">الرئيسية</a>
-  </div>
-</header>
-
-<div class="settings-wrap">
-  <div id="gate">
-    <p style="color:#94a3b8; margin-bottom:15px;">سجّل الدخول لعرض إعداداتك</p>
-    <input type="text" id="gateUsername" placeholder="اسم المستخدم">
-    <input type="password" id="gateCode" placeholder="الكود السري">
-    <button class="btn-primary" onclick="gateLogin()" style="width:100%;">دخول</button>
-    <p id="gateMsg" style="color:#f87171;"></p>
-  </div>
-
-  <div id="settingsPanel" class="admin-section hidden">
-    <h2>الإعدادات</h2>
-    <p style="color:#4ade80; margin-bottom:15px;">مرحباً <span id="meName"></span></p>
-
-    <h3 style="color:#a78bfa; margin:15px 0 8px;">تغيير الكود السري</h3>
-    <input type="password" id="newCode" placeholder="الكود السري الجديد">
-    <button class="btn-primary" onclick="changeCode()">حفظ الكود الجديد</button>
-    <p id="codeMsg" style="margin-top:8px;"></p>
-
-    <button class="btn-danger" style="margin-top:20px;" onclick="logoutSettings()">تسجيل الخروج</button>
-  </div>
+<div class="logo">
+<h1>📖 الجريدة الأدبية</h1>
+<p>الإعدادات الشخصية</p>
 </div>
-
+<div class="auth-box">
+<a href="index.html">الرئيسية</a>
+</div>
+</header>
+<div class="settings-wrap">
+<div id="gate">
+<p style="color:#94a3b8; margin-bottom:15px;">سجّل الدخول لعرض إعداداتك</p>
+<input type="text" id="gateUsername" placeholder="اسم المستخدم">
+<input type="password" id="gateCode" placeholder="الكود السري">
+<button class="btn-primary" onclick="gateLogin()" style="width:100%;">دخول</button>
+<p id="gateMsg" style="color:#f87171;"></p>
+</div>
+<div id="settingsPanel" class="admin-section hidden">
+<h2>الإعدادات</h2>
+<div style="text-align:center; margin-bottom:20px;">
+<img id="avatarPreview" src="" alt="صورة شخصية" style="width:100px;height:100px;border-radius:50%;object-fit:cover;border:2px solid #7c3aed;background:#1e293b;display:none;">
+<div id="avatarPlaceholder" style="width:100px;height:100px;border-radius:50%;background:#1e293b;border:2px solid #334155;margin:0 auto;display:flex;align-items:center;justify-content:center;color:#64748b;font-size:2rem;">👤</div>
+</div>
+<p style="color:#4ade80; margin-bottom:15px; text-align:center;">مرحباً <span id="meName"></span></p>
+<h3 style="color:#a78bfa; margin:15px 0 8px;">الصورة الشخصية</h3>
+<input type="text" id="avatarUrl" placeholder="رابط الصورة (URL)">
+<button class="btn-primary" onclick="saveAvatar()">حفظ الصورة</button>
+<p id="avatarMsg" style="margin-top:8px;"></p>
+<h3 style="color:#a78bfa; margin:20px 0 8px;">تغيير الكود السري</h3>
+<input type="password" id="newCode" placeholder="الكود السري الجديد">
+<button class="btn-primary" onclick="changeCode()">حفظ الكود الجديد</button>
+<p id="codeMsg" style="margin-top:8px;"></p>
+<button class="btn-danger" style="margin-top:20px;" onclick="logoutSettings()">تسجيل الخروج</button>
+</div>
+</div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="config.js"></script>
 <script>
 let me = null;
-
+function showMe(profile) {
+me = profile;
+document.getElementById("gate").classList.add("hidden");
+document.getElementById("settingsPanel").classList.remove("hidden");
+document.getElementById("meName").textContent = me.username;
+document.getElementById("avatarUrl").value = me.avatar_url || "";
+updateAvatarPreview(me.avatar_url);
+}
+function updateAvatarPreview(url) {
+const img = document.getElementById("avatarPreview");
+const placeholder = document.getElementById("avatarPlaceholder");
+if (url) {
+img.src = url;
+img.style.display = "block";
+placeholder.style.display = "none";
+} else {
+img.style.display = "none";
+placeholder.style.display = "flex";
+}
+}
 async function gateLogin() {
-  const username = document.getElementById("gateUsername").value.trim();
-  const code = document.getElementById("gateCode").value.trim();
-  const email = username.toLowerCase().replace(/[^a-z0-9]/g, "") + "@" + AUTH_DOMAIN;
-  const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password: code });
-  if (error) { document.getElementById("gateMsg").textContent = "بيانات الدخول غير صحيحة"; return; }
-
-  const { data: profile } = await supabaseClient.from("profiles").select("*").eq("id", data.user.id).single();
-  me = profile;
-  document.getElementById("gate").classList.add("hidden");
-  document.getElementById("settingsPanel").classList.remove("hidden");
-  document.getElementById("meName").textContent = me.username;
+const username = document.getElementById("gateUsername").value.trim();
+const code = document.getElementById("gateCode").value.trim();
+const email = username.toLowerCase().replace(/[^a-z0-9]/g, "") + "@" + AUTH_DOMAIN;
+const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password: code });
+if (error) { document.getElementById("gateMsg").textContent = "بيانات الدخول غير صحيحة"; return; }
+const { data: profile } = await supabaseClient.from("profiles").select("*").eq("id", data.user.id).single();
+showMe(profile);
 }
-
+async function saveAvatar() {
+const url = document.getElementById("avatarUrl").value.trim();
+const msg = document.getElementById("avatarMsg");
+const { error } = await supabaseClient.from("profiles").update({ avatar_url: url || null }).eq("id", me.id);
+if (error) { msg.style.color = "#f87171"; msg.textContent = "خطأ: " + error.message; return; }
+me.avatar_url = url;
+updateAvatarPreview(url);
+msg.style.color = "#4ade80";
+msg.textContent = "تم حفظ الصورة ✅";
+}
 async function changeCode() {
-  const newCode = document.getElementById("newCode").value.trim();
-  const msg = document.getElementById("codeMsg");
-  if (!newCode || newCode.length < 6) {
-    msg.style.color = "#f87171"; msg.textContent = "الكود يجب أن يكون 6 أحرف على الأقل"; return;
-  }
-  const { error } = await supabaseClient.auth.updateUser({ password: newCode });
-  if (error) { msg.style.color = "#f87171"; msg.textContent = "خطأ: " + error.message; return; }
-  msg.style.color = "#4ade80";
-  msg.textContent = "تم تغيير الكود بنجاح ✅";
-  document.getElementById("newCode").value = "";
+const newCode = document.getElementById("newCode").value.trim();
+const msg = document.getElementById("codeMsg");
+if (!newCode || newCode.length < 6) {
+msg.style.color = "#f87171"; msg.textContent = "الكود يجب أن يكون 6 أحرف على الأقل"; return;
 }
-
+const { error } = await supabaseClient.auth.updateUser({ password: newCode });
+if (error) { msg.style.color = "#f87171"; msg.textContent = "خطأ: " + error.message; return; }
+msg.style.color = "#4ade80";
+msg.textContent = "تم تغيير الكود بنجاح ✅";
+document.getElementById("newCode").value = "";
+}
 async function logoutSettings() {
-  await supabaseClient.auth.signOut();
-  location.href = "index.html";
+await supabaseClient.auth.signOut();
+location.href = "index.html";
 }
-
 document.addEventListener("DOMContentLoaded", async () => {
-  const { data: { session } } = await supabaseClient.auth.getSession();
-  if (session) {
-    const { data: profile } = await supabaseClient.from("profiles").select("*").eq("id", session.user.id).single();
-    if (profile) {
-      me = profile;
-      document.getElementById("gate").classList.add("hidden");
-      document.getElementById("settingsPanel").classList.remove("hidden");
-      document.getElementById("meName").textContent = me.username;
-    }
-  }
+const { data: { session } } = await supabaseClient.auth.getSession();
+if (session) {
+const { data: profile } = await supabaseClient.from("profiles").select("*").eq("id", session.user.id).single();
+if (profile) showMe(profile);
+}
 });
 </script>
 </body>

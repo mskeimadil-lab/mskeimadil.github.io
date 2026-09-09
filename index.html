@@ -7,49 +7,26 @@
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<!-- شاشة الترحيب -->
+<!-- شاشة الترحيب الذهبية -->
 <div id="splashScreen">
 <div class="splash-title">📖 الجريدة الأدبية</div>
 <div class="splash-sub">منصتك لقراءة ونشر الروايات</div>
 </div>
 <header class="header">
-<button id="menuToggleBtn" class="menu-toggle" onclick="toggleDrawer()">☰<span id="menuNewsDot" class="menu-news-dot hidden"></span></button>
 <div class="logo">
 <h1>📖 الجريدة الأدبية</h1>
 <p>منصتك لقراءة ونشر الروايات</p>
 </div>
 <div id="authBox" class="auth-box">
+<button id="newsBellBtn" class="news-bell" onclick="openNews()">🔔<span id="newsDot" class="news-dot hidden"></span></button>
 <button id="loginBtn" onclick="showAuth('login')">دخول</button>
 <button id="signupBtn" onclick="showAuth('signup')">حساب جديد</button>
 <span id="userBadge" class="hidden"></span>
+<a id="adminLink" href="admin.html" class="hidden">لوحة الإدارة</a>
+<a id="settingsLink" href="settings.html" class="hidden">الإعدادات</a>
 <button id="logoutBtn" class="hidden" onclick="logout()">خروج</button>
 </div>
 </header>
-<div id="drawerOverlay" class="drawer-overlay hidden" onclick="closeDrawer()"></div>
-<div id="sideDrawer" class="side-drawer hidden">
-<div class="drawer-header">
-<span>القائمة</span>
-<span class="close-reader" onclick="closeDrawer()">×</span>
-</div>
-<div class="drawer-item" onclick="openNews()"><span>📰 الأخبار</span><span id="drawerNewsDot" class="menu-news-dot hidden"></span></div>
-<div class="drawer-item" onclick="openFavorites()">⭐ المفضلة</div>
-<a class="drawer-item" href="settings.html">⚙️ الإعدادات</a>
-<a id="adminDrawerLink" href="admin.html" class="drawer-item hidden">🛠️ لوحة الإدارة</a>
-</div>
-<div id="newsModal" class="modal hidden">
-<div class="modal-content">
-<button class="close-btn" onclick="closeNews()">×</button>
-<h2 style="color:#a78bfa;margin-bottom:15px;">📰 الأخبار</h2>
-<div id="newsList"></div>
-</div>
-</div>
-<div id="favoritesModal" class="modal hidden">
-<div class="modal-content">
-<button class="close-btn" onclick="closeFavorites()">×</button>
-<h2 style="color:#a78bfa;margin-bottom:15px;">⭐ المفضلة</h2>
-<div id="favoritesList"></div>
-</div>
-</div>
 <div class="search-bar">
 <input type="text" id="searchInput" placeholder="🔍 ابحث عن رواية أو مؤلف...">
 </div>
@@ -77,63 +54,41 @@
 <p id="detailCategory" class="tag"></p>
 <p id="detailStatus"></p>
 <button id="favBtn" class="btn-primary" onclick="toggleFavorite()">☆ أضف للمفضلة</button>
-<div class="rating-block">
-<span id="ratingAvg" class="rating-avg">☆☆☆☆☆ (0)</span>
-<div class="rating-input">
-<span>قيّمها:</span>
-<span id="ratingStars" class="rating-stars">
-<span class="star" data-star="1" onclick="submitRating(1)">★</span><span class="star" data-star="2" onclick="submitRating(2)">★</span><span class="star" data-star="3" onclick="submitRating(3)">★</span><span class="star" data-star="4" onclick="submitRating(4)">★</span><span class="star" data-star="5" onclick="submitRating(5)">★</span>
-</span>
-</div>
-</div>
 </div>
 </div>
 <p id="detailDesc" class="article-text"></p>
 <h3>الفصول</h3>
 <div id="chaptersList"></div>
-<div id="chaptersPagination" class="chapters-pagination"></div>
 </div>
 </div>
 <div id="readerModal" class="reader-modal theme-dark hidden">
-<div id="readerProgress" class="reader-progress"><div id="readerProgressBar" class="reader-progress-bar"></div></div>
 <div class="reader-header">
 <span class="close-reader" onclick="closeReader()">×</span>
 <span id="readerNovelTitle" style="font-size:12px;font-weight:bold;color:#8b5cf6;"></span>
-<span>
-<span class="report-hint" onclick="openReportModal()">🚩</span>
-<span class="focus-hint" onclick="toggleFocusMode()">⛶</span>
-</span>
+<img id="readerAvatar" src="" alt="" style="width:28px;height:28px;border-radius:50%;object-fit:cover;display:none;border:1px solid #7c3aed;">
 </div>
+<div class="reading-progress"><div id="readingProgressBar" class="reading-progress-fill"></div></div>
 <div class="reader-toolbar">
 <span>اللون:</span>
 <span class="color-dot dot-dark" onclick="setTheme('theme-dark')"></span>
 <span class="color-dot dot-yellow" onclick="setTheme('theme-yellow')"></span>
 <span class="color-dot dot-light" onclick="setTheme('theme-light')"></span>
 <span class="color-dot dot-sepia" onclick="setTheme('theme-sepia')"></span>
-<span class="color-dot dot-nightblue" onclick="setTheme('theme-nightblue')"></span>
+<span class="color-dot dot-night" onclick="setTheme('theme-night')"></span>
 <span style="color:#555;">|</span>
 <button class="tool-btn" onclick="changeFontSize(2)">+ خط</button>
 <button class="tool-btn" onclick="changeFontSize(-2)">- خط</button>
-<button class="tool-btn" onclick="changeLineHeight(0.2)">+ تباعد</button>
-<button class="tool-btn" onclick="changeLineHeight(-0.2)">- تباعد</button>
-<button class="tool-btn" onclick="cycleMargin()">↔ الهامش</button>
+<span style="color:#555;">|</span>
+<button class="tool-btn" onclick="changeLineSpacing(0.2)">+ تباعد</button>
+<button class="tool-btn" onclick="changeLineSpacing(-0.2)">- تباعد</button>
 </div>
-<div class="reader-body" id="readerBody" onclick="handleReaderTap(event)">
+<div class="reader-body" id="readerBody">
 <h2 id="readerChTitle" class="reader-ch-title"></h2>
 <div id="readerChContent" class="reader-text"></div>
 <div class="reader-ad">
 <span class="reader-ad-label">إعلان</span>
 <script async data-cfasync="false" src="https://pl31174834.profitableratecpmnetwork.com/16862be26721288d37d8fc1d7d7cfba0/invoke.js"></script>
 <div id="container-16862be26721288d37d8fc1d7d7cfba0"></div>
-</div>
-<div class="comments-section">
-<h3 class="comments-title">💬 التعليقات</h3>
-<div id="commentForm" class="comment-form hidden">
-<textarea id="commentInput" placeholder="اكتب تعليقك على هذا الفصل..."></textarea>
-<button class="btn-primary" onclick="submitComment()">نشر التعليق</button>
-</div>
-<p id="commentLoginMsg" class="comment-login-msg hidden">سجّل دخول عشان تقدر تعلّق.</p>
-<div id="commentsList" class="comments-list"></div>
 </div>
 </div>
 <div class="reader-footer">
@@ -152,20 +107,11 @@
 <p id="authMsg" style="color:#f87171;font-size:0.85rem;"></p>
 </div>
 </div>
-<div id="reportModal" class="modal hidden">
-<div class="modal-content" style="max-width:380px;">
-<button class="close-btn" onclick="closeReportModal()">×</button>
-<h2>الإبلاغ عن مشكلة بالفصل</h2>
-<select id="reportReason">
-<option value="الفصل لا يعمل أو فاضي">الفصل لا يعمل / فاضي</option>
-<option value="خطأ إملائي أو ترجمة">خطأ إملائي أو ترجمة</option>
-<option value="محتوى غير لائق">محتوى غير لائق</option>
-<option value="ترتيب الفصول خاطئ">ترتيب الفصول خاطئ</option>
-<option value="غير ذلك">غير ذلك</option>
-</select>
-<textarea id="reportNote" placeholder="تفاصيل إضافية (اختياري)"></textarea>
-<button class="btn-primary" onclick="submitReport()" style="width:100%;margin-top:10px;">إرسال البلاغ</button>
-<p id="reportMsg" style="font-size:0.85rem;"></p>
+<div id="newsModal" class="modal hidden">
+<div class="modal-content" style="max-width:500px;">
+<button class="close-btn" onclick="closeNews()">×</button>
+<h2 style="color:#a78bfa;margin-bottom:15px;">📢 آخر الأخبار</h2>
+<div id="newsList"></div>
 </div>
 </div>
 <footer>
