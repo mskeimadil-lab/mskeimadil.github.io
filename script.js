@@ -357,16 +357,45 @@ async function loadComments(chapterId) {
 const { data } = await supabaseClient.from("comments").select("*").eq("chapter_id", chapterId).order("created_at", { ascending: false });
 const list = document.getElementById("commentsList");
 const comments = data || [];
+const userIds = [...new Set(comments.map(c => c.user_id))];
+let progressMap = {};
+if (userIds.length) {
+const { data: progressData } = await supabaseClient
+.from("reading_progress")
+.select("user_id, chapters(chapter_number)")
+.eq("novel_id", currentNovel.id)
+.in("user_id", userIds);
+(progressData || []).forEach(p => {
+const chNum = p.chapters?.chapter_number;
+if (chNum) progressMap[p.user_id] = chNum;
+});
+}
 list.innerHTML = comments.length
-? comments.map(c => `
+? comments.map(c => {
+const chNum = progressMap[c.user_id];
+const percent = (chNum && chaptersTotalCount) ? Math.min(100, Math.round((chNum / chaptersTotalCount) * 100)) : null;
+const bar = percent !== null ? renderProgressBarHtml(percent) : "";
+return `
 <div class="comment-item">
 <span class="comment-author">${c.username}</span>
 <span class="comment-date">${c.created_at ? c.created_at.slice(0,10) : ""}</span>
+${bar}
 <div class="comment-content"></div>
-</div>`).join("")
+</div>`;
+}).join("")
 : `<p class="comment-empty">لا توجد تعليقات بعد — كن أول من يعلّق!</p>`;
 list.querySelectorAll(".comment-content").forEach((el, i) => { el.textContent = comments[i].content; });
 document.getElementById("commentInput").value = "";
+}
+function progressColor(percent) {
+if (percent < 25) return "#3b82f6";
+if (percent < 41) return "#facc15";
+if (percent < 61) return "#ef4444";
+return "#581c87";
+}
+function renderProgressBarHtml(percent) {
+const color = progressColor(percent);
+return `<div class="comment-progress"><div class="comment-progress-track"><div class="comment-progress-fill" style="width:${percent}%;background:${color};"></div></div><span class="comment-progress-label">${percent}%</span></div>`;
 }
 async function submitComment() {
 if (!currentUser) { showAuth("login"); return; }

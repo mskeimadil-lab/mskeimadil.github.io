@@ -74,6 +74,10 @@ animation:cardNeon 6s ease-in-out infinite;
 .comment-item { background:#1a1a1a; border:1px solid #282828; border-radius:8px; padding:10px 12px; }
 .comment-author { color:#a78bfa; font-size:0.8rem; font-weight:bold; }
 .comment-date { color:#64748b; font-size:0.7rem; margin-right:8px; }
+.comment-progress { display:flex; align-items:center; gap:6px; margin-top:5px; }
+.comment-progress-track { flex:1; max-width:110px; height:5px; background:#282828; border-radius:3px; overflow:hidden; }
+.comment-progress-fill { height:100%; border-radius:3px; }
+.comment-progress-label { font-size:0.65rem; color:#64748b; }
 .comment-content { color:#cbd5e1; font-size:0.85rem; margin-top:4px; line-height:1.6; white-space:pre-wrap; }
 .comment-empty { color:#64748b; font-size:0.85rem; text-align:center; padding:10px; }
 .reader-modal { position:fixed; inset:0; z-index:9999; display:flex; flex-direction:column; }
