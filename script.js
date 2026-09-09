@@ -102,8 +102,10 @@ renderNovels();
 async function loadNovels() {
 const { data, error } = await supabaseClient
 .from("novels")
-.select("*, categories(name), chapters(count)")
-.order("updated_at", { ascending: false });
+.select("*, categories(name), chapters(id, chapter_number, title, created_at)")
+.order("updated_at", { ascending: false })
+.order("chapter_number", { ascending: false, foreignTable: "chapters" })
+.limit(3, { foreignTable: "chapters" });
 if (error) {
 document.getElementById("novelsGrid").innerHTML = `<p style="text-align:center;grid-column:1/-1;">تعذر تحميل الروايات</p>`;
 return;
@@ -111,6 +113,16 @@ return;
 allNovels = data || [];
 renderBanner();
 renderNovels();
+}
+function timeAgo(dateStr) {
+if (!dateStr) return "";
+const diff = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
+if (diff < 60) return "منذ لحظات";
+if (diff < 3600) return "منذ " + Math.floor(diff / 60) + " دقيقة";
+if (diff < 86400) return "منذ " + Math.floor(diff / 3600) + " ساعة";
+if (diff < 2592000) return "منذ " + Math.floor(diff / 86400) + " يوم";
+if (diff < 31536000) return "منذ " + Math.floor(diff / 2592000) + " شهر";
+return "منذ " + Math.floor(diff / 31536000) + " سنة";
 }
 let bannerNovels = [];
 let bannerIndex = 0;
@@ -161,25 +173,37 @@ grid.innerHTML = `<p style="text-align:center;grid-column:1/-1;padding:40px;">ل
 return;
 }
 let html = "";
-filtered.forEach((n, i) => {
-const chCount = n.chapters?.[0]?.count || 0;
+filtered.forEach((n) => {
+const chapters = (n.chapters || []).slice().sort((a, b) => b.chapter_number - a.chapter_number).slice(0, 3);
 html += `
-<article class="card" onclick="openNovel('${n.id}')">
-<div class="card-img-wrapper">
-<img src="${n.cover_url || 'https://via.placeholder.com/300x400?text=No+Cover'}" class="card-img" alt="${n.title}">
+<div class="novel-row" onclick="openNovel('${n.id}')">
+<div class="novel-row-cover">
+<img src="${n.cover_url || 'https://via.placeholder.com/300x400?text=No+Cover'}" alt="${n.title}">
 </div>
-<div class="card-content">
-<span class="tag">${n.categories?.name || ""}</span>
+<div class="novel-row-info">
 <h3>${n.title}</h3>
-<p class="author">✍️ ${n.author || "غير معروف"}</p>
-<div class="card-footer">
-<span>${chCount} فصل</span>
-<span>👁 ${n.views || 0}</span>
+<p class="novel-row-author">✍️ ${n.author || "غير معروف"} — 👁 ${n.views || 0}</p>
+<div class="novel-row-chapters">
+${chapters.length ? chapters.map(c => `
+<div class="chapter-pill" onclick="event.stopPropagation(); openChapterDirect('${n.id}','${c.id}')">
+<span class="ctime">${timeAgo(c.created_at)}</span>
+<span class="cnum">الفصل ${c.chapter_number}</span>
+</div>`).join("") : `<p class="no-chapters-msg">لا توجد فصول منشورة بعد</p>`}
 </div>
 </div>
-</article>`;
+</div>`;
 });
 grid.innerHTML = html;
+}
+async function openChapterDirect(novelId, chapterId) {
+currentNovel = allNovels.find(n => n.id === novelId);
+if (!currentNovel) return;
+supabaseClient.rpc('increment_views', { target_id: novelId });
+const { data: chapters } = await supabaseClient
+.from("chapters").select("*").eq("novel_id", novelId).order("chapter_number");
+currentChapters = chapters || [];
+const idx = currentChapters.findIndex(c => c.id === chapterId);
+openChapter(idx >= 0 ? idx : 0);
 }
 async function openNovel(id) {
 currentNovel = allNovels.find(n => n.id === id);
