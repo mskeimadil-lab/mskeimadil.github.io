@@ -13,6 +13,7 @@
 <div class="splash-sub">منصتك لقراءة ونشر الروايات</div>
 </div>
 <header class="header">
+<button id="menuToggleBtn" class="menu-toggle" onclick="toggleDrawer()">☰<span id="menuNewsDot" class="menu-news-dot hidden"></span></button>
 <div class="logo">
 <h1>📖 الجريدة الأدبية</h1>
 <p>منصتك لقراءة ونشر الروايات</p>
@@ -21,11 +22,34 @@
 <button id="loginBtn" onclick="showAuth('login')">دخول</button>
 <button id="signupBtn" onclick="showAuth('signup')">حساب جديد</button>
 <span id="userBadge" class="hidden"></span>
-<a id="adminLink" href="admin.html" class="hidden">لوحة الإدارة</a>
-<a id="settingsLink" href="settings.html" class="hidden">الإعدادات</a>
 <button id="logoutBtn" class="hidden" onclick="logout()">خروج</button>
 </div>
 </header>
+<div id="drawerOverlay" class="drawer-overlay hidden" onclick="closeDrawer()"></div>
+<div id="sideDrawer" class="side-drawer hidden">
+<div class="drawer-header">
+<span>القائمة</span>
+<span class="close-reader" onclick="closeDrawer()">×</span>
+</div>
+<div class="drawer-item" onclick="openNews()"><span>📰 الأخبار</span><span id="drawerNewsDot" class="menu-news-dot hidden"></span></div>
+<div class="drawer-item" onclick="openFavorites()">⭐ المفضلة</div>
+<a class="drawer-item" href="settings.html">⚙️ الإعدادات</a>
+<a id="adminDrawerLink" href="admin.html" class="drawer-item hidden">🛠️ لوحة الإدارة</a>
+</div>
+<div id="newsModal" class="modal hidden">
+<div class="modal-content">
+<button class="close-btn" onclick="closeNews()">×</button>
+<h2 style="color:#a78bfa;margin-bottom:15px;">📰 الأخبار</h2>
+<div id="newsList"></div>
+</div>
+</div>
+<div id="favoritesModal" class="modal hidden">
+<div class="modal-content">
+<button class="close-btn" onclick="closeFavorites()">×</button>
+<h2 style="color:#a78bfa;margin-bottom:15px;">⭐ المفضلة</h2>
+<div id="favoritesList"></div>
+</div>
+</div>
 <div class="search-bar">
 <input type="text" id="searchInput" placeholder="🔍 ابحث عن رواية أو مؤلف...">
 </div>

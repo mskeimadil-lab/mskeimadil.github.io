@@ -13,6 +13,7 @@ let currentTheme = "theme-dark";
 const marginWidths = [600, 750, 950];
 let currentMarginIndex = 1;
 let authMode = "login";
+
 document.addEventListener("DOMContentLoaded", async () => {
 showSplashOnce();
 await checkSession();
@@ -21,454 +22,1610 @@ await loadNovels();
 document.getElementById("searchInput").addEventListener("input", renderNovels);
 loadReaderPrefs();
 document.getElementById("readerBody").addEventListener("scroll", onReaderScroll);
+checkNewsDot();
 });
-function loadReaderPrefs() {
-const savedTheme = localStorage.getItem("reader_theme");
-if (savedTheme) setTheme(savedTheme);
-const savedFont = localStorage.getItem("reader_font_size");
-if (savedFont) {
-currentFontSize = parseInt(savedFont);
-document.getElementById("readerChContent").style.fontSize = currentFontSize + "px";
+
+function toggleDrawer() {
+document.getElementById("sideDrawer").classList.toggle("hidden");
+document.getElementById("drawerOverlay").classList.toggle("hidden");
 }
-const savedLH = localStorage.getItem("reader_line_height");
-if (savedLH) {
-currentLineHeight = parseFloat(savedLH);
-document.getElementById("readerChContent").style.lineHeight = currentLineHeight;
+
+function closeDrawer() {
+document.getElementById("sideDrawer").classList.add("hidden");
+document.getElementById("drawerOverlay").classList.add("hidden");
 }
-const savedMargin = localStorage.getItem("reader_margin_index");
-if (savedMargin !== null && marginWidths[savedMargin]) {
-currentMarginIndex = parseInt(savedMargin);
-document.getElementById("readerBody").style.maxWidth = marginWidths[currentMarginIndex] + "px";
+
+async function checkNewsDot() {
+const { data } = await supabaseClient.from("announcements").select("created_at").order("created_at", { ascending: false }).limit(1);
+
+if (!data || !data.length) return;
+
+const lastSeen = localStorage.getItem("news_last_seen");
+
+if (!lastSeen || new Date(data[0].created_at) > new Date(lastSeen)) {
+document.getElementById("menuNewsDot").classList.remove("hidden");
+document.getElementById("drawerNewsDot").classList.remove("hidden");
 }
 }
-function showSplashOnce() {
-const splash = document.getElementById("splashScreen");
-if (sessionStorage.getItem("splashShown")) {
-splash.remove();
+
+async function openNews() {
+closeDrawer();
+
+const { data } = await supabaseClient
+.from("announcements")
+.select("*")
+.order("created_at", { ascending: false });
+
+const list = document.getElementById("newsList");
+const items = data || [];
+
+list.innerHTML = items.length
+? items.map(n => `
+<div class="news-item">
+<h4>${n.title}</h4>
+<p></p>
+<span>${n.created_at ? n.created_at.slice(0,16).replace("T"," ") : ""}</span>
+</div>`).join("")
+: `<p style="color:#94a3b8;">لا توجد أخبار حالياً.</p>`;
+
+list.querySelectorAll(".news-item p").forEach((el, i) => {
+el.textContent = items[i].content;
+});
+
+document.getElementById("newsModal").classList.remove("hidden");
+
+if (items.length) {
+localStorage.setItem("news_last_seen", items[0].created_at);
+document.getElementById("menuNewsDot").classList.add("hidden");
+document.getElementById("drawerNewsDot").classList.add("hidden");
+}
+}
+
+function closeNews() {
+document.getElementById("newsModal").classList.add("hidden");
+}
+
+async function openFavorites() {
+closeDrawer();
+
+if (!currentUser) {
+showAuth("login");
 return;
 }
+
+const { data } = await supabaseClient
+.from("favorites")
+.select("novels(id, title, cover_url)")
+.eq("user_id", currentUser.id);
+
+const list = document.getElementById("favoritesList");
+
+const items = (data || []).filter(f => f.novels);
+
+list.innerHTML = items.length
+? items.map(f => `
+<div class="chapter-item" onclick="closeFavorites(); openNovel('${f.novels.id}')">
+<span>${f.novels.title}</span>
+<span>➔</span>
+</div>`).join("")
+: `<p style="color:#94a3b8;">ما ضفت أي رواية للمفضلة بعد.</p>`;
+
+document.getElementById("favoritesModal").classList.remove("hidden");
+}
+
+function closeFavorites() {
+document.getElementById("favoritesModal").classList.add("hidden");
+}
+
+function loadReaderPrefs() {
+
+const savedTheme = localStorage.getItem("reader_theme");
+
+if (savedTheme) setTheme(savedTheme);
+
+const savedFont = localStorage.getItem("reader_font_size");
+
+if (savedFont) {
+currentFontSize = parseInt(savedFont);
+document.getElementById("readerChContent").style.fontSize =
+currentFontSize + "px";
+}
+
+const savedLH = localStorage.getItem("reader_line_height");
+
+if (savedLH) {
+currentLineHeight = parseFloat(savedLH);
+document.getElementById("readerChContent").style.lineHeight =
+currentLineHeight;
+}
+
+const savedMargin = localStorage.getItem("reader_margin_index");
+
+if (savedMargin !== null && marginWidths[savedMargin]) {
+
+currentMarginIndex = parseInt(savedMargin);
+
+document.getElementById("readerBody").style.maxWidth =
+marginWidths[currentMarginIndex] + "px";
+
+}
+
+}
+
+function showSplashOnce() {
+
+const splash = document.getElementById("splashScreen");
+
+if (sessionStorage.getItem("splashShown")) {
+
+splash.remove();
+
+return;
+
+}
+
 sessionStorage.setItem("splashShown", "1");
+
 setTimeout(() => {
+
 splash.classList.add("fade-out");
+
 setTimeout(() => splash.remove(), 700);
+
 }, 1400);
+
 }
+
 async function checkSession() {
-const { data: { session } } = await supabaseClient.auth.getSession();
+
+const { data: { session } } =
+await supabaseClient.auth.getSession();
+
 if (session) await loadProfile(session.user.id);
+
 }
+
 async function loadProfile(userId) {
-const { data, error } = await supabaseClient.from("profiles").select("*").eq("id", userId).single();
+
+const { data, error } =
+await supabaseClient
+.from("profiles")
+.select("*")
+.eq("id", userId)
+.single();
+
 if (data) {
+
 currentUser = data;
+
 updateAuthUI();
+
 }
+
 }
+
 function updateAuthUI() {
-document.getElementById("loginBtn").classList.toggle("hidden", !!currentUser);
-document.getElementById("signupBtn").classList.toggle("hidden", !!currentUser);
-document.getElementById("logoutBtn").classList.toggle("hidden", !currentUser);
-document.getElementById("adminLink").classList.toggle("hidden", !currentUser);
-document.getElementById("settingsLink").classList.toggle("hidden", !currentUser);
-const badge = document.getElementById("userBadge");
+
+document.getElementById("loginBtn")
+.classList.toggle("hidden", !!currentUser);
+
+document.getElementById("signupBtn")
+.classList.toggle("hidden", !!currentUser);
+
+document.getElementById("logoutBtn")
+.classList.toggle("hidden", !currentUser);
+
+document.getElementById("adminDrawerLink")
+.classList.toggle(
+"hidden",
+!(currentUser && currentUser.is_admin)
+);
+
+const badge =
+document.getElementById("userBadge");
+
 if (currentUser) {
-badge.textContent = "مرحباً، " + currentUser.username + (currentUser.is_admin ? " (أدمن)" : "");
+
+badge.textContent =
+"مرحباً، " +
+currentUser.username +
+(currentUser.is_admin ? " (أدمن)" : "");
+
 badge.classList.remove("hidden");
+
 } else {
+
 badge.classList.add("hidden");
+
 }
+
 }
+
 function showAuth(mode) {
+
 authMode = mode;
-document.getElementById("authTitle").textContent = mode === "login" ? "دخول" : "إنشاء حساب جديد";
+
+document.getElementById("authTitle").textContent =
+mode === "login"
+? "دخول"
+: "إنشاء حساب جديد";
+
 document.getElementById("authMsg").textContent = "";
-document.getElementById("authModal").classList.remove("hidden");
+
+document.getElementById("authModal")
+.classList.remove("hidden");
+
 }
-function closeAuth() { document.getElementById("authModal").classList.add("hidden"); }
+
+function closeAuth() {
+
+document.getElementById("authModal")
+.classList.add("hidden");
+
+}
+
 async function submitAuth() {
-const username = document.getElementById("authUsername").value.trim();
-const code = document.getElementById("authCode").value.trim();
-const msg = document.getElementById("authMsg");
-if (!username || !code) { msg.textContent = "الرجاء تعبئة الحقلين"; return; }
-const email = username.toLowerCase().replace(/[^a-z0-9]/g, "") + "@" + AUTH_DOMAIN;
+
+const username =
+document.getElementById("authUsername")
+.value.trim();
+
+const code =
+document.getElementById("authCode")
+.value.trim();
+
+const msg =
+document.getElementById("authMsg");
+
+if (!username || !code) {
+
+msg.textContent =
+"الرجاء تعبئة الحقلين";
+
+return;
+
+}
+
+const email =
+username.toLowerCase()
+.replace(/[^a-z0-9]/g, "") +
+"@" + AUTH_DOMAIN;
+
 if (authMode === "signup") {
-const { data, error } = await supabaseClient.auth.signUp({
-email, password: code,
-options: { data: { username } }
+
+const { data, error } =
+await supabaseClient.auth.signUp({
+
+email,
+password: code,
+
+options: {
+data: { username }
+}
+
 });
-if (error) { msg.textContent = "خطأ: " + error.message; return; }
-if (data.user) await loadProfile(data.user.id);
-} else {
-const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password: code });
-if (error) { msg.textContent = "اسم مستخدم أو كود خاطئ"; return; }
+
+if (error) {
+
+msg.textContent =
+"خطأ: " + error.message;
+
+return;
+
+}
+
+if (data.user)
 await loadProfile(data.user.id);
+
+} else {
+
+const { data, error } =
+await supabaseClient.auth
+.signInWithPassword({
+
+email,
+password: code
+
+});
+
+if (error) {
+
+msg.textContent =
+"اسم مستخدم أو كود خاطئ";
+
+return;
+
 }
+
+await loadProfile(data.user.id);
+
+}
+
 closeAuth();
+
 }
+
 async function logout() {
+
 await supabaseClient.auth.signOut();
+
 currentUser = null;
+
 updateAuthUI();
+
 }
+
 async function loadCategories() {
-const { data } = await supabaseClient.from("categories").select("*").order("id");
+
+const { data } =
+await supabaseClient
+.from("categories")
+.select("*")
+.order("id");
+
 allCategories = data || [];
-const nav = document.getElementById("categoryTabs");
-nav.innerHTML = '<button class="active" onclick="filterCategory(\'all\')">الكل</button>' +
-allCategories.map(c => `<button onclick="filterCategory(${c.id})">${c.name}</button>`).join("");
+
+const nav =
+document.getElementById("categoryTabs");
+
+nav.innerHTML =
+'<button class="active" onclick="filterCategory(\'all\')">الكل</button>' +
+
+allCategories.map(c =>
+`<button onclick="filterCategory(${c.id})">${c.name}</button>`
+).join("");
+
 }
+
 function filterCategory(cat) {
+
 currentCategory = cat;
-document.querySelectorAll(".categories button").forEach(btn => btn.classList.remove("active"));
+
+document
+.querySelectorAll(".categories button")
+.forEach(btn =>
+btn.classList.remove("active")
+);
+
 event.target.classList.add("active");
+
 renderNovels();
+
 }
+
 async function loadNovels() {
-const { data, error } = await supabaseClient
+
+const { data, error } =
+await supabaseClient
 .from("novels")
 .select("*, categories(name), chapters(count)")
 .order("updated_at", { ascending: false });
+
 if (error) {
-document.getElementById("novelsGrid").innerHTML = `<p style="text-align:center;grid-column:1/-1;">تعذر تحميل الروايات</p>`;
+
+document.getElementById("novelsGrid").innerHTML =
+`<p style="text-align:center;grid-column:1/-1;">تعذر تحميل الروايات</p>`;
+
 return;
+
 }
+
 allNovels = data || [];
+
 renderBanner();
+
 renderNovels();
+
 }
+
 let bannerNovels = [];
+
 let bannerIndex = 0;
+
 let bannerTimer = null;
+
 function renderBanner() {
-const wrap = document.getElementById("bannerWrap");
+
+const wrap =
+document.getElementById("bannerWrap");
+
 bannerNovels = [...allNovels]
+
 .filter(n => n.cover_url)
-.sort((a, b) => (b.views || 0) - (a.views || 0))
+
+.sort((a, b) =>
+(b.views || 0) - (a.views || 0)
+)
+
 .slice(0, 5);
-if (!bannerNovels.length) { wrap.classList.add("hidden"); return; }
+
+if (!bannerNovels.length) {
+
+wrap.classList.add("hidden");
+
+return;
+
+}
+
 wrap.classList.remove("hidden");
-const track = document.getElementById("bannerTrack");
-const dots = document.getElementById("bannerDots");
-track.innerHTML = bannerNovels.map((n, i) => `
-<div class="banner-slide${i === 0 ? ' active' : ''}" style="background-image:url('${n.cover_url}')" onclick="openNovel('${n.id}')">
+
+const track =
+document.getElementById("bannerTrack");
+
+const dots =
+document.getElementById("bannerDots");
+
+track.innerHTML =
+bannerNovels.map((n, i) => `
+
+<div class="banner-slide${i === 0 ? ' active' : ''}"
+style="background-image:url('${n.cover_url}')"
+onclick="openNovel('${n.id}')">
+
 <div class="banner-info">
+
 <span>🔥 الأكثر مشاهدة</span>
+
 <h2>${n.title}</h2>
+
 </div>
-</div>`).join("");
-dots.innerHTML = bannerNovels.map((_, i) => `<span class="${i === 0 ? 'active' : ''}" onclick="goToBanner(${i})"></span>`).join("");
+
+</div>
+
+`).join("");
+
+dots.innerHTML =
+bannerNovels.map((_, i) =>
+`<span class="${i === 0 ? 'active' : ''}"
+onclick="goToBanner(${i})"></span>`
+).join("");
+
 bannerIndex = 0;
-if (bannerTimer) clearInterval(bannerTimer);
+
+if (bannerTimer)
+clearInterval(bannerTimer);
+
 if (bannerNovels.length > 1) {
-bannerTimer = setInterval(() => goToBanner((bannerIndex + 1) % bannerNovels.length), 4500);
+
+bannerTimer =
+setInterval(() =>
+goToBanner(
+(bannerIndex + 1) %
+bannerNovels.length
+),
+4500
+);
+
 }
+
 }
+
 function goToBanner(i) {
+
 bannerIndex = i;
-document.querySelectorAll(".banner-slide").forEach((el, idx) => el.classList.toggle("active", idx === i));
-document.querySelectorAll(".banner-dots span").forEach((el, idx) => el.classList.toggle("active", idx === i));
+
+document
+.querySelectorAll(".banner-slide")
+.forEach((el, idx) =>
+el.classList.toggle(
+"active",
+idx === i
+)
+);
+
+document
+.querySelectorAll(".banner-dots span")
+.forEach((el, idx) =>
+el.classList.toggle(
+"active",
+idx === i
+)
+);
+
 }
+
 function renderNovels() {
-const grid = document.getElementById("novelsGrid");
-const term = document.getElementById("searchInput").value.toLowerCase();
-const isTrending = currentCategory === "trending";
-let filtered = allNovels.filter(n => {
-const matchesCat = isTrending || currentCategory === "all" || n.category_id === currentCategory;
-const matchesSearch = n.title.toLowerCase().includes(term) || (n.author || "").toLowerCase().includes(term);
-return matchesCat && matchesSearch;
+
+const grid =
+document.getElementById("novelsGrid");
+
+const term =
+document.getElementById("searchInput")
+.value
+.toLowerCase();
+
+const isTrending =
+currentCategory === "trending";
+
+let filtered =
+allNovels.filter(n => {
+
+const matchesCat =
+isTrending ||
+currentCategory === "all" ||
+n.category_id === currentCategory;
+
+const matchesSearch =
+n.title.toLowerCase().includes(term) ||
+(n.author || "")
+.toLowerCase()
+.includes(term);
+
+return matchesCat &&
+matchesSearch;
+
 });
+
 if (isTrending) {
-filtered = filtered.slice().sort((a, b) => (b.views || 0) - (a.views || 0));
+
+filtered =
+filtered.slice()
+.sort((a, b) =>
+(b.views || 0) -
+(a.views || 0)
+);
+
 }
+
 if (filtered.length === 0) {
-grid.innerHTML = `<p style="text-align:center;grid-column:1/-1;padding:40px;">لا توجد روايات مطابقة بعد.</p>`;
+
+grid.innerHTML =
+`<p style="text-align:center;grid-column:1/-1;padding:40px;">لا توجد روايات مطابقة بعد.</p>`;
+
 return;
+
 }
+
 let html = "";
+
 filtered.forEach((n, i) => {
-const chCount = n.chapters?.[0]?.count || 0;
+
+const chCount =
+n.chapters?.[0]?.count || 0;
+
 html += `
-<article class="card" onclick="openNovel('${n.id}')">
+
+<article class="card"
+onclick="openNovel('${n.id}')">
+
 <div class="card-img-wrapper">
-<img src="${n.cover_url || 'https://via.placeholder.com/300x400?text=No+Cover'}" class="card-img" alt="${n.title}">
+
+<img
+src="${n.cover_url || 'https://via.placeholder.com/300x400?text=No+Cover'}"
+class="card-img"
+alt="${n.title}">
+
 </div>
+
 <div class="card-content">
-<span class="tag">${n.categories?.name || ""}</span>
+
+<span class="tag">
+${n.categories?.name || ""}
+</span>
+
 <h3>${n.title}</h3>
-<p class="author">✍️ ${n.author || "غير معروف"}</p>
+
+<p class="author">
+✍️ ${n.author || "غير معروف"}
+</p>
+
 <div class="card-footer">
+
 <span>${chCount} فصل</span>
+
 <span>👁 ${n.views || 0}</span>
+
 </div>
+
 </div>
-</article>`;
+
+</article>
+
+`;
+
 });
+
 grid.innerHTML = html;
+
 }
+
 async function openNovel(id) {
-currentNovel = allNovels.find(n => n.id === id);
+
+currentNovel =
+allNovels.find(n => n.id === id);
+
 if (!currentNovel) return;
-const viewedKey = "viewed_" + id;
+
+const viewedKey =
+"viewed_" + id;
+
 if (!sessionStorage.getItem(viewedKey)) {
-sessionStorage.setItem(viewedKey, "1");
-supabaseClient.rpc('increment_views', { target_id: id });
+
+sessionStorage.setItem(
+viewedKey,
+"1"
+);
+
+supabaseClient.rpc(
+'increment_views',
+{ target_id: id }
+);
+
 }
-document.getElementById("detailCover").src = currentNovel.cover_url || "https://via.placeholder.com/300x400?text=No+Cover";
-document.getElementById("detailTitle").textContent = currentNovel.title;
-document.getElementById("detailAuthor").textContent = "✍️ " + (currentNovel.author || "غير معروف");
-document.getElementById("detailCategory").textContent = currentNovel.categories?.name || "";
-document.getElementById("detailStatus").textContent = "الحالة: " + (currentNovel.status || "") +
-"  |  👁 " + (currentNovel.views || 0) + " مشاهدة" +
-"  |  📅 نُشرت: " + (currentNovel.created_at ? currentNovel.created_at.slice(0,10) : "");
-document.getElementById("detailDesc").textContent = currentNovel.description || "";
+
+document.getElementById("detailCover").src =
+currentNovel.cover_url ||
+"https://via.placeholder.com/300x400?text=No+Cover";
+
+document.getElementById("detailTitle").textContent =
+currentNovel.title;
+
+document.getElementById("detailAuthor").textContent =
+"✍️ " +
+(currentNovel.author || "غير معروف");
+
+document.getElementById("detailCategory").textContent =
+currentNovel.categories?.name || "";
+
+document.getElementById("detailStatus").textContent =
+
+"الحالة: " +
+(currentNovel.status || "") +
+
+"  |  👁 " +
+(currentNovel.views || 0) +
+
+" مشاهدة" +
+
+"  |  📅 نُشرت: " +
+
+(currentNovel.created_at
+? currentNovel.created_at.slice(0,10)
+: "");
+
+document.getElementById("detailDesc").textContent =
+currentNovel.description || "";
+
 await loadChaptersPage(1);
+
 await updateFavButton();
+
 await loadRatings();
-document.getElementById("novelModal").classList.remove("hidden");
+
+document.getElementById("novelModal")
+.classList.remove("hidden");
+
 }
+
 async function loadRatings() {
-const { data } = await supabaseClient.from("ratings").select("stars, user_id").eq("novel_id", currentNovel.id);
+
+const { data } =
+await supabaseClient
+.from("ratings")
+.select("stars, user_id")
+.eq("novel_id", currentNovel.id);
+
 const ratings = data || [];
-const avg = ratings.length ? ratings.reduce((s, r) => s + r.stars, 0) / ratings.length : 0;
-const full = Math.round(avg);
-document.getElementById("ratingAvg").textContent = "★".repeat(full) + "☆".repeat(5 - full) + " (" + ratings.length + ")";
+
+const avg =
+ratings.length
+? ratings.reduce(
+(s, r) => s + r.stars,
+0
+) / ratings.length
+: 0;
+
+const full =
+Math.round(avg);
+
+document.getElementById("ratingAvg").textContent =
+
+"★".repeat(full) +
+
+"☆".repeat(5 - full) +
+
+" (" + ratings.length + ")";
+
 let myRating = 0;
+
 if (currentUser) {
-const mine = ratings.find(r => r.user_id === currentUser.id);
-if (mine) myRating = mine.stars;
+
+const mine =
+ratings.find(r =>
+r.user_id === currentUser.id
+);
+
+if (mine)
+myRating = mine.stars;
+
 }
-document.querySelectorAll("#ratingStars .star").forEach(el => {
-el.classList.toggle("active", parseInt(el.dataset.star) <= myRating);
+
+document
+.querySelectorAll("#ratingStars .star")
+.forEach(el => {
+
+el.classList.toggle(
+"active",
+parseInt(el.dataset.star) <= myRating
+);
+
 });
+
 }
+
 async function submitRating(stars) {
-if (!currentUser) { showAuth("login"); return; }
-await supabaseClient.from("ratings").upsert({
-novel_id: currentNovel.id, user_id: currentUser.id, stars
-}, { onConflict: "novel_id,user_id" });
-await loadRatings();
-}
-function closeNovel() { document.getElementById("novelModal").classList.add("hidden"); }
-async function updateFavButton() {
-const btn = document.getElementById("favBtn");
-if (!currentUser) { btn.textContent = "☆ سجّل دخول لتفعيل المفضلة"; return; }
-const { data } = await supabaseClient.from("favorites")
-.select("*").eq("user_id", currentUser.id).eq("novel_id", currentNovel.id).maybeSingle();
-btn.textContent = data ? "★ في المفضلة" : "☆ أضف للمفضلة";
-}
-async function toggleFavorite() {
-if (!currentUser) { showAuth("login"); return; }
-const { data } = await supabaseClient.from("favorites")
-.select("*").eq("user_id", currentUser.id).eq("novel_id", currentNovel.id).maybeSingle();
-if (data) {
-await supabaseClient.from("favorites").delete().eq("user_id", currentUser.id).eq("novel_id", currentNovel.id);
-} else {
-await supabaseClient.from("favorites").insert({ user_id: currentUser.id, novel_id: currentNovel.id });
-}
-await updateFavButton();
-}
-async function loadChaptersPage(page) {
-chaptersPage = page;
-const from = (page - 1) * CHAPTERS_PER_PAGE;
-const to = from + CHAPTERS_PER_PAGE - 1;
-const { data, count } = await supabaseClient
-.from("chapters")
-.select("id, chapter_number, title", { count: "exact" })
-.eq("novel_id", currentNovel.id)
-.order("chapter_number")
-.range(from, to);
-chaptersTotalCount = count || 0;
-const pageChapters = data || [];
-const list = document.getElementById("chaptersList");
-list.innerHTML = pageChapters.length
-? pageChapters.map(c => `
-<div class="chapter-item" onclick="openChapterByNumber(${c.chapter_number})">
-<span>الفصل ${c.chapter_number}: ${c.title}</span>
-<span>➔</span>
-</div>`).join("")
-: `<p style="color:#94a3b8;">لا توجد فصول منشورة بعد.</p>`;
-renderChaptersPagination();
-}
-function renderChaptersPagination() {
-const wrap = document.getElementById("chaptersPagination");
-if (!wrap) return;
-const totalPages = Math.ceil(chaptersTotalCount / CHAPTERS_PER_PAGE);
-if (totalPages <= 1) { wrap.innerHTML = ""; return; }
-let html = "";
-for (let p = 1; p <= totalPages; p++) {
-html += `<button class="page-btn${p === chaptersPage ? ' active' : ''}" onclick="loadChaptersPage(${p})">${p}</button>`;
-}
-wrap.innerHTML = html;
-}
-async function openChapterByNumber(chapterNumber) {
-document.getElementById("readerModal").classList.remove("hidden");
-document.getElementById("novelModal").classList.add("hidden");
-await loadChapterByNumber(chapterNumber);
-if (currentUser && currentChapter) {
-await supabaseClient.from("reading_progress").upsert({
-user_id: currentUser.id,
-novel_id: currentNovel.id,
-chapter_id: currentChapter.id,
-updated_at: new Date().toISOString()
-});
-}
-}
-async function loadChapterByNumber(chapterNumber) {
-document.getElementById("readerNovelTitle").textContent = currentNovel.title;
-document.getElementById("readerChTitle").textContent = "جاري التحميل...";
-document.getElementById("readerChContent").textContent = "";
-const { data, error } = await supabaseClient
-.from("chapters").select("id, chapter_number, title, content")
-.eq("novel_id", currentNovel.id).eq("chapter_number", chapterNumber).single();
-if (error || !data) {
-document.getElementById("readerChTitle").textContent = "تعذر تحميل هذا الفصل";
+
+if (!currentUser) {
+
+showAuth("login");
+
 return;
+
 }
-currentChapter = data;
-renderChapter();
+
+await supabaseClient
+.from("ratings")
+.upsert({
+
+novel_id: currentNovel.id,
+
+user_id: currentUser.id,
+
+stars
+
+},
+{
+onConflict: "novel_id,user_id"
 }
-function renderChapter() {
-const ch = currentChapter;
-document.getElementById("readerNovelTitle").textContent = currentNovel.title;
-document.getElementById("readerChTitle").textContent = "الفصل " + ch.chapter_number + ": " + ch.title;
-document.getElementById("readerChContent").textContent = ch.content;
-const prevBtn = document.getElementById("prevChBtn");
-const nextBtn = document.getElementById("nextChBtn");
-prevBtn.classList.toggle("disabled", ch.chapter_number <= 1);
-prevBtn.onclick = ch.chapter_number > 1 ? () => loadChapterByNumber(ch.chapter_number - 1) : null;
-nextBtn.classList.toggle("disabled", ch.chapter_number >= chaptersTotalCount);
-nextBtn.onclick = ch.chapter_number < chaptersTotalCount ? () => loadChapterByNumber(ch.chapter_number + 1) : null;
-const readerBody = document.getElementById("readerBody");
-const savedPos = localStorage.getItem("read_pos_" + ch.id);
-requestAnimationFrame(() => {
-if (savedPos && parseFloat(savedPos) > 0.01) {
-const max = readerBody.scrollHeight - readerBody.clientHeight;
-readerBody.scrollTop = max * parseFloat(savedPos);
-} else {
-readerBody.scrollTop = 0;
+);
+
+await loadRatings();
+
 }
-onReaderScroll();
-});
-loadComments(ch.id);
-document.getElementById("commentForm").classList.toggle("hidden", !currentUser);
-document.getElementById("commentLoginMsg").classList.toggle("hidden", !!currentUser);
+
+function closeNovel() {
+
+document.getElementById("novelModal")
+.classList.add("hidden");
+
 }
-async function loadComments(chapterId) {
-const { data } = await supabaseClient.from("comments").select("*").eq("chapter_id", chapterId).order("created_at", { ascending: false });
-const list = document.getElementById("commentsList");
-const comments = data || [];
-const userIds = [...new Set(comments.map(c => c.user_id))];
-let progressMap = {};
-if (userIds.length) {
-const { data: progressData } = await supabaseClient
-.from("reading_progress")
-.select("user_id, chapters(chapter_number)")
+
+async function updateFavButton() {
+
+const btn =
+document.getElementById("favBtn");
+
+if (!currentUser) {
+
+btn.textContent =
+"☆ سجّل دخول لتفعيل المفضلة";
+
+return;
+
+}
+
+const { data } =
+await supabaseClient
+.from("favorites")
+.select("*")
+.eq("user_id", currentUser.id)
 .eq("novel_id", currentNovel.id)
-.in("user_id", userIds);
-(progressData || []).forEach(p => {
-const chNum = p.chapters?.chapter_number;
-if (chNum) progressMap[p.user_id] = chNum;
-});
+.maybeSingle();
+
+btn.textContent =
+data
+? "★ في المفضلة"
+: "☆ أضف للمفضلة";
+
 }
-list.innerHTML = comments.length
+
+async function toggleFavorite() {
+
+if (!currentUser) {
+
+showAuth("login");
+
+return;
+
+}
+
+const { data } =
+await supabaseClient
+.from("favorites")
+.select("*")
+.eq("user_id", currentUser.id)
+.eq("novel_id", currentNovel.id)
+.maybeSingle();
+
+if (data) {
+
+await supabaseClient
+.from("favorites")
+.delete()
+.eq("user_id", currentUser.id)
+.eq("novel_id", currentNovel.id);
+
+} else {
+
+await supabaseClient
+.from("favorites")
+.insert({
+
+user_id: currentUser.id,
+
+novel_id: currentNovel.id
+
+});
+
+}
+
+await updateFavButton();
+
+}
+
+async function loadChaptersPage(page) {
+
+chaptersPage = page;
+
+const from =
+(page - 1) *
+CHAPTERS_PER_PAGE;
+
+const to =
+from +
+CHAPTERS_PER_PAGE -
+1;
+
+const { data, count } =
+await supabaseClient
+.from("chapters")
+
+.select(
+"id, chapter_number, title",
+{ count: "exact" }
+)
+
+.eq("novel_id", currentNovel.id)
+
+.order("chapter_number")
+
+.range(from, to);
+
+chaptersTotalCount =
+count || 0;
+
+const pageChapters =
+data || [];
+
+const list =
+document.getElementById("chaptersList");
+
+list.innerHTML =
+pageChapters.length
+
+? pageChapters.map(c => `
+
+<div class="chapter-item"
+onclick="openChapterByNumber(${c.chapter_number})">
+
+<span>
+الفصل ${c.chapter_number}: ${c.title}
+</span>
+
+<span>➔</span>
+
+</div>
+
+`).join("")
+
+: `<p style="color:#94a3b8;">لا توجد فصول منشورة بعد.</p>`;
+
+renderChaptersPagination();
+
+}
+
+function renderChaptersPagination() {
+
+const wrap =
+document.getElementById("chaptersPagination");
+
+if (!wrap) return;
+
+const totalPages =
+Math.ceil(
+chaptersTotalCount /
+CHAPTERS_PER_PAGE
+);
+
+if (totalPages <= 1) {
+
+wrap.innerHTML = "";
+
+return;
+
+}
+
+let html = "";
+
+for (
+let p = 1;
+p <= totalPages;
+p++
+) {
+
+html +=
+`<button class="page-btn${p === chaptersPage ? ' active' : ''}"
+onclick="loadChaptersPage(${p})">${p}</button>`;
+
+}
+
+wrap.innerHTML = html;
+
+}
+
+async function openChapterByNumber(chapterNumber) {
+
+document.getElementById("readerModal")
+.classList.remove("hidden");
+
+document.getElementById("novelModal")
+.classList.add("hidden");
+
+await loadChapterByNumber(
+chapterNumber
+);
+
+if (currentUser && currentChapter) {
+
+await supabaseClient
+.from("reading_progress")
+.upsert({
+
+user_id: currentUser.id,
+
+novel_id: currentNovel.id,
+
+chapter_id: currentChapter.id,
+
+updated_at:
+new Date().toISOString()
+
+});
+
+}
+
+}
+
+async function loadChapterByNumber(chapterNumber) {
+
+document.getElementById("readerNovelTitle").textContent =
+currentNovel.title;
+
+document.getElementById("readerChTitle").textContent =
+"جاري التحميل...";
+
+document.getElementById("readerChContent").textContent =
+"";
+
+const { data, error } =
+await supabaseClient
+.from("chapters")
+
+.select(
+"id, chapter_number, title, content"
+)
+
+.eq(
+"novel_id",
+currentNovel.id
+)
+
+.eq(
+"chapter_number",
+chapterNumber
+)
+
+.single();
+
+if (error || !data) {
+
+document.getElementById("readerChTitle").textContent =
+"تعذر تحميل هذا الفصل";
+
+return;
+
+}
+
+currentChapter = data;
+
+renderChapter();
+
+}
+
+function renderChapter() {
+
+const ch =
+currentChapter;
+
+document.getElementById("readerNovelTitle").textContent =
+currentNovel.title;
+
+document.getElementById("readerChTitle").textContent =
+
+"الفصل " +
+
+ch.chapter_number +
+
+": " +
+
+ch.title;
+
+document.getElementById("readerChContent").textContent =
+ch.content;
+
+const prevBtn =
+document.getElementById("prevChBtn");
+
+const nextBtn =
+document.getElementById("nextChBtn");
+
+prevBtn.classList.toggle(
+"disabled",
+ch.chapter_number <= 1
+);
+
+prevBtn.onclick =
+ch.chapter_number > 1
+
+? () =>
+loadChapterByNumber(
+ch.chapter_number - 1
+)
+
+: null;
+
+nextBtn.classList.toggle(
+"disabled",
+ch.chapter_number >= chaptersTotalCount
+);
+
+nextBtn.onclick =
+ch.chapter_number < chaptersTotalCount
+
+? () =>
+loadChapterByNumber(
+ch.chapter_number + 1
+)
+
+: null;
+
+const readerBody =
+document.getElementById("readerBody");
+
+const savedPos =
+localStorage.getItem(
+"read_pos_" + ch.id
+);
+
+requestAnimationFrame(() => {
+
+if (
+savedPos &&
+parseFloat(savedPos) > 0.01
+) {
+
+const max =
+readerBody.scrollHeight -
+readerBody.clientHeight;
+
+readerBody.scrollTop =
+max * parseFloat(savedPos);
+
+} else {
+
+readerBody.scrollTop = 0;
+
+}
+
+onReaderScroll();
+
+});
+
+loadComments(ch.id);
+
+document.getElementById("commentForm")
+.classList.toggle(
+"hidden",
+!currentUser
+);
+
+document.getElementById("commentLoginMsg")
+.classList.toggle(
+"hidden",
+!!currentUser
+);
+
+}
+
+async function loadComments(chapterId) {
+
+const { data } =
+await supabaseClient
+.from("comments")
+.select("*")
+.eq("chapter_id", chapterId)
+.order(
+"created_at",
+{ ascending: false }
+);
+
+const list =
+document.getElementById("commentsList");
+
+const comments =
+data || [];
+
+const userIds =
+[
+...new Set(
+comments.map(c => c.user_id)
+)
+];
+
+let progressMap = {};
+
+if (userIds.length) {
+
+const { data: progressData } =
+await supabaseClient
+
+.from("reading_progress")
+
+.select(
+"user_id, chapters(chapter_number)"
+)
+
+.eq(
+"novel_id",
+currentNovel.id
+)
+
+.in(
+"user_id",
+userIds
+);
+
+(progressData || [])
+.forEach(p => {
+
+const chNum =
+p.chapters?.chapter_number;
+
+if (chNum)
+progressMap[p.user_id] =
+chNum;
+
+});
+
+}
+
+list.innerHTML =
+comments.length
+
 ? comments.map(c => {
-const chNum = progressMap[c.user_id];
-const percent = (chNum && chaptersTotalCount) ? Math.min(100, Math.round((chNum / chaptersTotalCount) * 100)) : null;
-const bar = percent !== null ? renderProgressBarHtml(percent) : "";
+
+const chNum =
+progressMap[c.user_id];
+
+const percent =
+(chNum && chaptersTotalCount)
+
+? Math.min(
+100,
+Math.round(
+(chNum / chaptersTotalCount)
+* 100
+)
+)
+
+: null;
+
+const bar =
+percent !== null
+
+? renderProgressBarHtml(percent)
+
+: "";
+
 return `
+
 <div class="comment-item">
-<span class="comment-author">${c.username}</span>
-<span class="comment-date">${c.created_at ? c.created_at.slice(0,10) : ""}</span>
+
+<span class="comment-author">
+${c.username}
+</span>
+
+<span class="comment-date">
+${c.created_at ? c.created_at.slice(0,10) : ""}
+</span>
+
 ${bar}
+
 <div class="comment-content"></div>
-</div>`;
+
+</div>
+
+`;
+
 }).join("")
+
 : `<p class="comment-empty">لا توجد تعليقات بعد — كن أول من يعلّق!</p>`;
-list.querySelectorAll(".comment-content").forEach((el, i) => { el.textContent = comments[i].content; });
-document.getElementById("commentInput").value = "";
+
+list
+.querySelectorAll(".comment-content")
+
+.forEach((el, i) => {
+
+el.textContent =
+comments[i].content;
+
+});
+
+document.getElementById("commentInput").value =
+"";
+
 }
+
 function progressColor(percent) {
-if (percent < 25) return "#3b82f6";
-if (percent < 41) return "#facc15";
-if (percent < 61) return "#ef4444";
+
+if (percent < 25)
+return "#3b82f6";
+
+if (percent < 41)
+return "#facc15";
+
+if (percent < 61)
+return "#ef4444";
+
 return "#581c87";
+
 }
+
 function renderProgressBarHtml(percent) {
-const color = progressColor(percent);
-return `<div class="comment-progress"><div class="comment-progress-track"><div class="comment-progress-fill" style="width:${percent}%;background:${color};"></div></div><span class="comment-progress-label">${percent}%</span></div>`;
+
+const color =
+progressColor(percent);
+
+return `<div class="comment-progress">
+
+<div class="comment-progress-track">
+
+<div class="comment-progress-fill"
+style="width:${percent}%;background:${color};">
+
+</div>
+
+</div>
+
+<span class="comment-progress-label">
+${percent}%
+</span>
+
+</div>`;
+
+}async function submitComment() {
+
+if (!currentUser) {
+
+showAuth("login");
+
+return;
+
 }
-async function submitComment() {
-if (!currentUser) { showAuth("login"); return; }
-const input = document.getElementById("commentInput");
-const content = input.value.trim();
+
+const input =
+document.getElementById("commentInput");
+
+const content =
+input.value.trim();
+
 if (!content) return;
-const ch = currentChapter;
-await supabaseClient.from("comments").insert({
-chapter_id: ch.id, novel_id: currentNovel.id, user_id: currentUser.id,
-username: currentUser.username, content
+
+const ch =
+currentChapter;
+
+await supabaseClient
+.from("comments")
+.insert({
+
+chapter_id: ch.id,
+
+novel_id: currentNovel.id,
+
+user_id: currentUser.id,
+
+username: currentUser.username,
+
+content
+
 });
+
 await loadComments(ch.id);
+
 }
+
 function openReportModal() {
-if (!currentUser) { showAuth("login"); return; }
-document.getElementById("reportMsg").textContent = "";
-document.getElementById("reportNote").value = "";
-document.getElementById("reportModal").classList.remove("hidden");
+
+if (!currentUser) {
+
+showAuth("login");
+
+return;
+
 }
-function closeReportModal() { document.getElementById("reportModal").classList.add("hidden"); }
+
+document.getElementById("reportMsg").textContent =
+"";
+
+document.getElementById("reportNote").value =
+"";
+
+document.getElementById("reportModal")
+.classList.remove("hidden");
+
+}
+
+function closeReportModal() {
+
+document.getElementById("reportModal")
+.classList.add("hidden");
+
+}
+
 async function submitReport() {
-const reason = document.getElementById("reportReason").value;
-const note = document.getElementById("reportNote").value.trim();
-const ch = currentChapter;
-const msg = document.getElementById("reportMsg");
-const { error } = await supabaseClient.from("reports").insert({
-chapter_id: ch.id, novel_id: currentNovel.id, user_id: currentUser.id,
-username: currentUser.username, reason, note: note || null
+
+const reason =
+document.getElementById("reportReason")
+.value;
+
+const note =
+document.getElementById("reportNote")
+.value.trim();
+
+const ch =
+currentChapter;
+
+const msg =
+document.getElementById("reportMsg");
+
+const { error } =
+await supabaseClient
+.from("reports")
+.insert({
+
+chapter_id: ch.id,
+
+novel_id: currentNovel.id,
+
+user_id: currentUser.id,
+
+username: currentUser.username,
+
+reason,
+
+note: note || null
+
 });
-if (error) { msg.style.color = "#f87171"; msg.textContent = "تعذر إرسال البلاغ، حاول مرة ثانية"; return; }
-msg.style.color = "#4ade80";
-msg.textContent = "تم إرسال البلاغ، شكراً لك";
-setTimeout(closeReportModal, 1200);
+
+if (error) {
+
+msg.style.color =
+"#f87171";
+
+msg.textContent =
+"تعذر إرسال البلاغ، حاول مرة ثانية";
+
+return;
+
 }
+
+msg.style.color =
+"#4ade80";
+
+msg.textContent =
+"تم إرسال البلاغ، شكراً لك";
+
+setTimeout(
+closeReportModal,
+1200
+);
+
+}
+
 function onReaderScroll() {
-const el = document.getElementById("readerBody");
-const max = el.scrollHeight - el.clientHeight;
-const percent = max > 0 ? Math.min(1, el.scrollTop / max) : 0;
-const bar = document.getElementById("readerProgressBar");
-if (bar) bar.style.width = (percent * 100) + "%";
+
+const el =
+document.getElementById("readerBody");
+
+const max =
+el.scrollHeight -
+el.clientHeight;
+
+const percent =
+max > 0
+
+? Math.min(
+1,
+el.scrollTop / max
+)
+
+: 0;
+
+const bar =
+document.getElementById("readerProgressBar");
+
+if (bar)
+bar.style.width =
+(percent * 100) + "%";
+
 if (currentChapter) {
-localStorage.setItem("read_pos_" + currentChapter.id, percent.toFixed(4));
+
+localStorage.setItem(
+
+"read_pos_" +
+currentChapter.id,
+
+percent.toFixed(4)
+
+);
+
 }
+
 }
-function closeReader() { document.getElementById("readerModal").classList.add("hidden"); }
+
+function closeReader() {
+
+document.getElementById("readerModal")
+.classList.add("hidden");
+
+}
+
 function setTheme(t) {
+
 currentTheme = t;
-const modal = document.getElementById("readerModal");
-const wasFocus = modal.classList.contains("focus-mode");
-const wasHidden = modal.classList.contains("hidden");
-modal.className = "reader-modal " + t + (wasFocus ? " focus-mode" : "") + (wasHidden ? " hidden" : "");
-localStorage.setItem("reader_theme", t);
+
+const modal =
+document.getElementById("readerModal");
+
+const wasFocus =
+modal.classList.contains(
+"focus-mode"
+);
+
+const wasHidden =
+modal.classList.contains(
+"hidden"
+);
+
+modal.className =
+"reader-modal " +
+t +
+(wasFocus
+? " focus-mode"
+: "") +
+(wasHidden
+? " hidden"
+: "");
+
+localStorage.setItem(
+"reader_theme",
+t
+);
+
 }
+
 function changeFontSize(delta) {
-currentFontSize = Math.min(28, Math.max(12, currentFontSize + delta));
-document.getElementById("readerChContent").style.fontSize = currentFontSize + "px";
-localStorage.setItem("reader_font_size", currentFontSize);
+
+currentFontSize =
+Math.min(
+28,
+
+Math.max(
+12,
+currentFontSize + delta
+)
+
+);
+
+document.getElementById("readerChContent")
+.style.fontSize =
+currentFontSize + "px";
+
+localStorage.setItem(
+"reader_font_size",
+currentFontSize
+);
+
 }
+
 function changeLineHeight(delta) {
-currentLineHeight = Math.min(3.0, Math.max(1.4, +(currentLineHeight + delta).toFixed(1)));
-document.getElementById("readerChContent").style.lineHeight = currentLineHeight;
-localStorage.setItem("reader_line_height", currentLineHeight);
+
+currentLineHeight =
+Math.min(
+
+3.0,
+
+Math.max(
+
+1.4,
+
++(
+currentLineHeight + delta
+).toFixed(1)
+
+)
+
+);
+
+document.getElementById("readerChContent")
+.style.lineHeight =
+currentLineHeight;
+
+localStorage.setItem(
+"reader_line_height",
+currentLineHeight
+);
+
 }
+
 function cycleMargin() {
-currentMarginIndex = (currentMarginIndex + 1) % marginWidths.length;
-document.getElementById("readerBody").style.maxWidth = marginWidths[currentMarginIndex] + "px";
-localStorage.setItem("reader_margin_index", currentMarginIndex);
+
+currentMarginIndex =
+(currentMarginIndex + 1) %
+marginWidths.length;
+
+document.getElementById("readerBody")
+.style.maxWidth =
+
+marginWidths[currentMarginIndex]
++ "px";
+
+localStorage.setItem(
+
+"reader_margin_index",
+
+currentMarginIndex
+
+);
+
 }
+
 function toggleFocusMode() {
-document.getElementById("readerModal").classList.toggle("focus-mode");
+
+document.getElementById("readerModal")
+.classList.toggle("focus-mode");
+
 }
+
 function handleReaderTap(event) {
-if (event.target.closest(".reader-ad") || event.target.closest(".reader-toolbar")) return;
-if (window.getSelection().toString().length > 0) return;
+
+if (
+
+event.target.closest(".reader-ad") ||
+
+event.target.closest(".reader-toolbar")
+
+) return;
+
+if (
+
+window.getSelection()
+.toString()
+.length > 0
+
+) return;
+
 toggleFocusMode();
+
 }
+
