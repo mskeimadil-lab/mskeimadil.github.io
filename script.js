@@ -244,12 +244,13 @@ reason
 });
 alert("تم إرسال البلاغ، شكراً لك ✅");
 }
+let chapterContentCache = {};
 async function openChapterDirect(novelId, chapterId) {
 currentNovel = allNovels.find(n => n.id === novelId);
 if (!currentNovel) return;
 supabaseClient.rpc('increment_views', { target_id: novelId });
 const { data: chapters } = await supabaseClient
-.from("chapters").select("*").eq("novel_id", novelId).order("chapter_number");
+.from("chapters").select("id, chapter_number, title").eq("novel_id", novelId).order("chapter_number");
 currentChapters = chapters || [];
 const idx = currentChapters.findIndex(c => c.id === chapterId);
 openChapter(idx >= 0 ? idx : 0);
@@ -267,18 +268,54 @@ document.getElementById("detailStatus").textContent = "الحالة: " + (curren
 "  |  📅 نُشرت: " + (currentNovel.created_at ? currentNovel.created_at.slice(0,10) : "");
 document.getElementById("detailDesc").textContent = currentNovel.description || "";
 const { data: chapters } = await supabaseClient
-.from("chapters").select("*").eq("novel_id", id).order("chapter_number");
+.from("chapters").select("id, chapter_number, title").eq("novel_id", id).order("chapter_number");
 currentChapters = chapters || [];
+renderChaptersList();
+await updateFavButton();
+document.getElementById("novelModal").classList.remove("hidden");
+}
+function renderChaptersList() {
 const list = document.getElementById("chaptersList");
-list.innerHTML = currentChapters.length
-? currentChapters.map((c, i) => `
+if (!currentChapters.length) {
+list.innerHTML = `<p style="color:#94a3b8;">لا توجد فصول منشورة بعد.</p>`;
+return;
+}
+const groupSize = 150;
+if (currentChapters.length <= groupSize) {
+list.innerHTML = currentChapters.map((c, i) => `
 <div class="chapter-item" onclick="openChapter(${i})">
 <span>الفصل ${c.chapter_number}: ${c.title}</span>
 <span>➔</span>
-</div>`).join("")
-: `<p style="color:#94a3b8;">لا توجد فصول منشورة بعد.</p>`;
-await updateFavButton();
-document.getElementById("novelModal").classList.remove("hidden");
+</div>`).join("");
+return;
+}
+let html = "";
+for (let g = 0; g < currentChapters.length; g += groupSize) {
+const group = currentChapters.slice(g, g + groupSize);
+const start = group[0].chapter_number;
+const end = group[group.length - 1].chapter_number;
+const gi = g / groupSize;
+html += `
+<div class="chapter-group">
+<div class="chapter-group-header" onclick="toggleChapterGroup(${gi})">
+<span>الفصول من ${start} إلى ${end}</span>
+<span class="chevron" id="chevron-${gi}">▾</span>
+</div>
+<div class="chapter-group-body hidden" id="group-${gi}">
+${group.map((c) => `
+<div class="chapter-item" onclick="openChapter(${currentChapters.indexOf(c)})">
+<span>الفصل ${c.chapter_number}: ${c.title}</span>
+<span>➔</span>
+</div>`).join("")}
+</div>
+</div>`;
+}
+list.innerHTML = html;
+}
+function toggleChapterGroup(gi) {
+const body = document.getElementById("group-" + gi);
+body.classList.toggle("hidden");
+document.getElementById("chevron-" + gi).textContent = body.classList.contains("hidden") ? "▾" : "▴";
 }
 function closeNovel() { document.getElementById("novelModal").classList.add("hidden"); }
 async function updateFavButton() {
@@ -301,9 +338,9 @@ await updateFavButton();
 }
 async function openChapter(index) {
 currentChIndex = index;
-renderChapter();
 document.getElementById("readerModal").classList.remove("hidden");
 document.getElementById("novelModal").classList.add("hidden");
+await renderChapter();
 if (currentUser) {
 await supabaseClient.from("reading_progress").upsert({
 user_id: currentUser.id,
@@ -313,11 +350,11 @@ updated_at: new Date().toISOString()
 });
 }
 }
-function renderChapter() {
+async function renderChapter() {
 const ch = currentChapters[currentChIndex];
 document.getElementById("readerNovelTitle").textContent = currentNovel.title;
 document.getElementById("readerChTitle").textContent = "الفصل " + ch.chapter_number + ": " + ch.title;
-document.getElementById("readerChContent").textContent = ch.content;
+document.getElementById("readerChContent").textContent = "جاري تحميل الفصل...";
 const avatarImg = document.getElementById("readerAvatar");
 if (currentUser && currentUser.avatar_url) {
 avatarImg.src = currentUser.avatar_url;
@@ -331,6 +368,12 @@ prevBtn.classList.toggle("disabled", currentChIndex === 0);
 prevBtn.onclick = currentChIndex > 0 ? () => { currentChIndex--; renderChapter(); } : null;
 nextBtn.classList.toggle("disabled", currentChIndex === currentChapters.length - 1);
 nextBtn.onclick = currentChIndex < currentChapters.length - 1 ? () => { currentChIndex++; renderChapter(); } : null;
+if (!chapterContentCache[ch.id]) {
+const { data } = await supabaseClient.from("chapters").select("content").eq("id", ch.id).single();
+chapterContentCache[ch.id] = data?.content || "";
+}
+if (currentChapters[currentChIndex]?.id !== ch.id) return;
+document.getElementById("readerChContent").textContent = chapterContentCache[ch.id];
 const body = document.getElementById("readerBody");
 requestAnimationFrame(() => {
 const saved = localStorage.getItem("scrollpos_" + ch.id);

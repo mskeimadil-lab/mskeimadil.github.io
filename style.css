@@ -234,3 +234,11 @@ body { padding-bottom:70px; }
 .bottom-nav button.active { color:#a78bfa; }
 .novel-row-cover { position:relative; }
 .cover-edit-btn { position:absolute; top:-6px; left:-6px; width:26px; height:26px; border-radius:50%; background:#7c3aed; color:#fff; border:2px solid #0f172a; font-size:1rem; font-weight:bold; cursor:pointer; display:flex; align-items:center; justify-content:center; line-height:1; }
+
+/* ===== تقسيم الفصول لمجموعات (لتسريع فتح الروايات الطويلة) ===== */
+.chapter-group { margin-bottom: 8px; border: 1px solid #334155; border-radius: 8px; overflow: hidden; }
+.chapter-group-header { display:flex; justify-content:space-between; align-items:center; background:#1e293b; padding:12px 14px; cursor:pointer; font-weight:bold; color:#a78bfa; }
+.chapter-group-header:hover { background:#263449; }
+.chapter-group-body { max-height:340px; overflow-y:auto; background:#0f172a; }
+.chapter-group-body .chapter-item { margin-bottom:0; border-radius:0; border-left:none; border-right:none; border-top:none; }
+.chevron { transition: transform 0.2s; }
