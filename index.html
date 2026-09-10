@@ -81,6 +81,8 @@
 <span style="color:#555;">|</span>
 <button class="tool-btn" onclick="changeLineSpacing(0.2)">+ تباعد</button>
 <button class="tool-btn" onclick="changeLineSpacing(-0.2)">- تباعد</button>
+<span style="color:#555;">|</span>
+<button class="tool-btn" onclick="reportChapter()">🚩 إبلاغ</button>
 </div>
 <div class="reader-body" id="readerBody">
 <h2 id="readerChTitle" class="reader-ch-title"></h2>
@@ -117,6 +119,13 @@
 <footer>
 <p>© الجريدة الأدبية — منصة روايات</p>
 </footer>
+<nav class="bottom-nav">
+<button onclick="goAccount()"><span>👤</span><small>حسابك</small></button>
+<button onclick="comingSoon('المتجر')"><span>🛍️</span><small>المتجر</small></button>
+<button onclick="comingSoon('المستويات')"><span>⭐</span><small>المستويات</small></button>
+<button onclick="openLibrary()"><span>📚</span><small>المكتبة</small></button>
+<button class="active" onclick="goHome()"><span>🏠</span><small>الرئيسية</small></button>
+</nav>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="config.js"></script>
 <script src="script.js"></script>

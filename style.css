@@ -225,3 +225,12 @@ body, .header, .header h1, .categories button.active, .banner-track, .card { ani
 .chapter-pill .cnum { color:#e2e8f0; font-weight:bold; }
 .chapter-pill .ctime { color:#64748b; }
 .no-chapters-msg { color:#64748b; font-size:0.8rem; }
+
+/* ===== الشريط السفلي + زر تعديل الغلاف السريع للأدمن ===== */
+body { padding-bottom:70px; }
+.bottom-nav { position:fixed; bottom:0; left:0; right:0; display:flex; justify-content:space-around; background:#111827; border-top:1px solid #334155; padding:8px 4px calc(8px + env(safe-area-inset-bottom)); z-index:500; }
+.bottom-nav button { background:none; border:none; color:#94a3b8; display:flex; flex-direction:column; align-items:center; gap:2px; font-size:0.65rem; cursor:pointer; flex:1; padding:4px; }
+.bottom-nav button span { font-size:1.2rem; }
+.bottom-nav button.active { color:#a78bfa; }
+.novel-row-cover { position:relative; }
+.cover-edit-btn { position:absolute; top:-6px; left:-6px; width:26px; height:26px; border-radius:50%; background:#7c3aed; color:#fff; border:2px solid #0f172a; font-size:1rem; font-weight:bold; cursor:pointer; display:flex; align-items:center; justify-content:center; line-height:1; }

@@ -80,11 +80,13 @@ if (error) { msg.textContent = "اسم مستخدم أو كود خاطئ"; retur
 await loadProfile(data.user.id);
 }
 closeAuth();
+renderNovels();
 }
 async function logout() {
 await supabaseClient.auth.signOut();
 currentUser = null;
 updateAuthUI();
+renderNovels();
 }
 async function loadCategories() {
 const { data } = await supabaseClient.from("categories").select("*").order("id");
@@ -156,12 +158,17 @@ bannerIndex = i;
 document.querySelectorAll(".banner-slide").forEach((el, idx) => el.classList.toggle("active", idx === i));
 document.querySelectorAll(".banner-dots span").forEach((el, idx) => el.classList.toggle("active", idx === i));
 }
+let favoriteIds = [];
 function renderNovels() {
 const grid = document.getElementById("novelsGrid");
 const term = document.getElementById("searchInput").value.toLowerCase();
 const isTrending = currentCategory === "trending";
+const isFavorites = currentCategory === "favorites";
 let filtered = allNovels.filter(n => {
-const matchesCat = isTrending || currentCategory === "all" || n.category_id === currentCategory;
+let matchesCat;
+if (isFavorites) matchesCat = favoriteIds.includes(n.id);
+else if (isTrending) matchesCat = true;
+else matchesCat = currentCategory === "all" || n.category_id === currentCategory;
 const matchesSearch = n.title.toLowerCase().includes(term) || (n.author || "").toLowerCase().includes(term);
 return matchesCat && matchesSearch;
 });
@@ -169,9 +176,10 @@ if (isTrending) {
 filtered = filtered.slice().sort((a, b) => (b.views || 0) - (a.views || 0));
 }
 if (filtered.length === 0) {
-grid.innerHTML = `<p style="text-align:center;grid-column:1/-1;padding:40px;">لا توجد روايات مطابقة بعد.</p>`;
+grid.innerHTML = `<p style="text-align:center;grid-column:1/-1;padding:40px;">${isFavorites ? "مفضلتك فارغة — أضف روايات من زر ☆ داخل صفحة الرواية" : "لا توجد روايات مطابقة بعد."}</p>`;
 return;
 }
+const isAdmin = currentUser && currentUser.is_admin;
 let html = "";
 filtered.forEach((n) => {
 const chapters = (n.chapters || []).slice().sort((a, b) => b.chapter_number - a.chapter_number).slice(0, 3);
@@ -179,6 +187,7 @@ html += `
 <div class="novel-row" onclick="openNovel('${n.id}')">
 <div class="novel-row-cover">
 <img src="${n.cover_url || 'https://via.placeholder.com/300x400?text=No+Cover'}" alt="${n.title}">
+${isAdmin ? `<button class="cover-edit-btn" onclick="event.stopPropagation(); changeCoverPrompt('${n.id}')">+</button>` : ""}
 </div>
 <div class="novel-row-info">
 <h3>${n.title}</h3>
@@ -194,6 +203,46 @@ ${chapters.length ? chapters.map(c => `
 </div>`;
 });
 grid.innerHTML = html;
+}
+async function changeCoverPrompt(novelId) {
+const url = prompt("رابط صورة الغلاف الجديدة:");
+if (!url) return;
+const { error } = await supabaseClient.from("novels").update({ cover_url: url }).eq("id", novelId);
+if (error) { alert("خطأ: " + error.message); return; }
+await loadNovels();
+}
+function goHome() {
+currentCategory = "all";
+document.querySelectorAll(".categories button").forEach((b, i) => b.classList.toggle("active", i === 0));
+renderNovels();
+window.scrollTo({ top: 0, behavior: "smooth" });
+}
+function goAccount() {
+if (currentUser) location.href = "settings.html";
+else showAuth("login");
+}
+function comingSoon(name) {
+alert(name + " قريباً 🚀");
+}
+async function openLibrary() {
+if (!currentUser) { showAuth("login"); return; }
+const { data } = await supabaseClient.from("favorites").select("novel_id").eq("user_id", currentUser.id);
+favoriteIds = (data || []).map(f => f.novel_id);
+currentCategory = "favorites";
+document.querySelectorAll(".categories button").forEach(b => b.classList.remove("active"));
+renderNovels();
+window.scrollTo({ top: 0, behavior: "smooth" });
+}
+async function reportChapter() {
+const reason = prompt("وش المشكلة بهذا الفصل؟ (خطأ بالنص، ترجمة سيئة، محتوى مخالف...)");
+if (!reason) return;
+const ch = currentChapters[currentChIndex];
+await supabaseClient.from("reports").insert({
+novel_id: currentNovel.id,
+chapter_id: ch.id,
+reason
+});
+alert("تم إرسال البلاغ، شكراً لك ✅");
 }
 async function openChapterDirect(novelId, chapterId) {
 currentNovel = allNovels.find(n => n.id === novelId);

@@ -77,6 +77,10 @@
 <p id="newsMsg" style="color:#4ade80;margin-top:8px;"></p>
 <div id="adminNewsList" style="margin-top:15px;"></div>
 </div>
+<div class="admin-section">
+<h2>🚩 البلاغات</h2>
+<div id="adminReportsList"></div>
+</div>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
@@ -104,6 +108,7 @@ document.getElementById("adminName").textContent = admin.username + (admin.is_ad
 await loadCategories();
 await loadNovelsAdmin();
 await loadNewsAdmin();
+await loadReportsAdmin();
 }
 async function loadCategories() {
 const { data } = await supabaseClient.from("categories").select("*").order("id");
@@ -272,6 +277,21 @@ async function deleteNews(id) {
 if (!confirm("حذف هذا الخبر؟")) return;
 await supabaseClient.from("news").delete().eq("id", id);
 await loadNewsAdmin();
+}
+async function loadReportsAdmin() {
+const { data } = await supabaseClient.from("reports")
+.select("*, novels(title), chapters(chapter_number,title)")
+.order("created_at", { ascending: false });
+document.getElementById("adminReportsList").innerHTML = (data || []).map(r => `
+<div class="admin-row" style="flex-direction:column;align-items:flex-start;">
+<strong style="color:#a78bfa;">${r.novels?.title || "رواية محذوفة"} — الفصل ${r.chapters?.chapter_number ?? ""}</strong>
+<p style="color:#cbd5e1;font-size:0.85rem;margin:6px 0;">${r.reason}</p>
+<button class="btn-danger" onclick="deleteReport(${r.id})">حذف البلاغ</button>
+</div>`).join("") || "<p style='color:#94a3b8;'>لا توجد بلاغات حالياً.</p>";
+}
+async function deleteReport(id) {
+await supabaseClient.from("reports").delete().eq("id", id);
+await loadReportsAdmin();
 }
 </script>
 </body>
