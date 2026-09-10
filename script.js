@@ -7,6 +7,64 @@ let currentChapters = [];
 let currentChIndex = 0;
 let currentFontSize = 16;
 let currentLineHeight = 2.2;
+const RANKS = [
+{ threshold: 200, name: "قارب ملكي", img: "ranks/rank1.png" },
+{ threshold: 1500, name: "قارئ إمبراطور", img: "ranks/rank2.png" },
+{ threshold: 4500, name: "قارئ أسطوري", img: "ranks/rank3.png" },
+{ threshold: 7500, name: "قارئ سلف", img: "ranks/rank4.png" },
+{ threshold: 10500, name: "سيد الطائفة", img: "ranks/rank5.png" },
+{ threshold: 13500, name: "الخالد", img: "ranks/rank6.png" },
+{ threshold: 16500, name: "الوصي", img: "ranks/rank7.png" },
+{ threshold: 19500, name: "العاهل الكوني", img: "ranks/rank8.png" },
+{ threshold: 20000, name: "سيد الأكوان", img: "ranks/rank9.png" },
+{ threshold: 30000, name: "الأصل الأول", img: "ranks/rank10.png" }
+];
+const FOUNDER_USERNAMES = ["adil", "gmzoro394"];
+function getRank(count) {
+let current = null;
+for (const r of RANKS) { if (count >= r.threshold) current = r; }
+return current;
+}
+function updateRankBadge() {
+const badge = document.getElementById("userRankBadge");
+if (!badge) return;
+if (!currentUser) { badge.classList.add("hidden"); return; }
+const uname = (currentUser.username || "").toLowerCase();
+const img = document.getElementById("rankBadgeImg");
+const avatarImg = document.getElementById("rankBadgeAvatar");
+const nameEl = document.getElementById("rankBadgeName");
+avatarImg.src = currentUser.avatar_url || "";
+avatarImg.style.display = currentUser.avatar_url ? "block" : "none";
+badge.classList.remove("founder-badge");
+if (FOUNDER_USERNAMES.includes(uname)) {
+img.src = "ranks/emperor.png";
+img.style.display = "block";
+nameEl.textContent = "أدمن";
+badge.classList.add("founder-badge");
+badge.classList.remove("hidden");
+} else {
+const rank = getRank(currentUser.chapters_read_count || 0);
+if (rank) {
+img.src = rank.img;
+img.style.display = "block";
+nameEl.textContent = rank.name;
+badge.classList.remove("hidden");
+} else {
+badge.classList.add("hidden");
+}
+}
+}
+async function trackChapterRead(chapterId) {
+if (!currentUser) return;
+const { data } = await supabaseClient.from("read_chapters")
+.upsert({ user_id: currentUser.id, chapter_id: chapterId }, { onConflict: "user_id,chapter_id", ignoreDuplicates: true })
+.select();
+if (data && data.length) {
+currentUser.chapters_read_count = (currentUser.chapters_read_count || 0) + 1;
+await supabaseClient.from("profiles").update({ chapters_read_count: currentUser.chapters_read_count }).eq("id", currentUser.id);
+updateRankBadge();
+}
+}
 let authMode = "login";
 document.addEventListener("DOMContentLoaded", async () => {
 showSplashOnce();
@@ -53,6 +111,7 @@ badge.classList.remove("hidden");
 } else {
 badge.classList.add("hidden");
 }
+updateRankBadge();
 }
 function showAuth(mode) {
 authMode = mode;
@@ -187,7 +246,7 @@ html += `
 <div class="novel-row" onclick="openNovel('${n.id}')">
 <div class="novel-row-cover">
 <img src="${n.cover_url || 'https://via.placeholder.com/300x400?text=No+Cover'}" alt="${n.title}">
-${isAdmin ? `<button class="cover-edit-btn" onclick="event.stopPropagation(); changeCoverPrompt('${n.id}')">+</button>` : ""}
+${isAdmin ? `<button class="cover-edit-btn" onclick="event.stopPropagation(); triggerCoverFile('${n.id}')">+</button>` : ""}
 </div>
 <div class="novel-row-info">
 <h3>${n.title}</h3>
@@ -204,10 +263,20 @@ ${chapters.length ? chapters.map(c => `
 });
 grid.innerHTML = html;
 }
-async function changeCoverPrompt(novelId) {
-const url = prompt("رابط صورة الغلاف الجديدة:");
-if (!url) return;
-const { error } = await supabaseClient.from("novels").update({ cover_url: url }).eq("id", novelId);
+let coverEditNovelId = null;
+function triggerCoverFile(novelId) {
+coverEditNovelId = novelId;
+document.getElementById("coverFileInput").click();
+}
+async function handleCoverFileChange(e) {
+const file = e.target.files[0];
+if (!file || !coverEditNovelId) return;
+const path = `${Date.now()}_${file.name}`;
+const { error: upErr } = await supabaseClient.storage.from("covers").upload(path, file);
+if (upErr) { alert("فشل رفع الصورة: " + upErr.message); e.target.value = ""; return; }
+const { data: pub } = supabaseClient.storage.from("covers").getPublicUrl(path);
+const { error } = await supabaseClient.from("novels").update({ cover_url: pub.publicUrl }).eq("id", coverEditNovelId);
+e.target.value = "";
 if (error) { alert("خطأ: " + error.message); return; }
 await loadNovels();
 }
@@ -243,6 +312,38 @@ chapter_id: ch.id,
 reason
 });
 alert("تم إرسال البلاغ، شكراً لك ✅");
+}
+async function loadComments(chapterId) {
+const { data } = await supabaseClient.from("comments")
+.select("*, profiles(username, avatar_url)")
+.eq("chapter_id", chapterId)
+.order("created_at", { ascending: false });
+const list = document.getElementById("commentsList");
+if (!list) return;
+list.innerHTML = (data && data.length) ? data.map(c => `
+<div class="comment-item">
+${c.profiles?.avatar_url ? `<img class="comment-avatar" src="${c.profiles.avatar_url}">` : `<div class="comment-avatar-placeholder">👤</div>`}
+<div class="comment-body">
+<div class="comment-head">
+<strong>${c.profiles?.username || "مستخدم"}</strong>
+<span class="comment-time">${timeAgo(c.created_at)}</span>
+</div>
+<p>${c.content}</p>
+</div>
+</div>`).join("") : `<p style="color:#64748b;font-size:0.85rem;">لا توجد تعليقات بعد، كن أول من يعلّق!</p>`;
+}
+async function submitComment() {
+if (!currentUser) { showAuth("login"); return; }
+const input = document.getElementById("commentInput");
+const content = input.value.trim();
+if (!content) return;
+const ch = currentChapters[currentChIndex];
+const { error } = await supabaseClient.from("comments").insert({
+chapter_id: ch.id, novel_id: currentNovel.id, user_id: currentUser.id, content
+});
+if (error) { alert("خطأ: " + error.message); return; }
+input.value = "";
+await loadComments(ch.id);
 }
 let chapterContentCache = {};
 async function openChapterDirect(novelId, chapterId) {
@@ -348,6 +449,7 @@ novel_id: currentNovel.id,
 chapter_id: currentChapters[index].id,
 updated_at: new Date().toISOString()
 });
+trackChapterRead(currentChapters[index].id);
 }
 }
 async function renderChapter() {
@@ -374,6 +476,7 @@ chapterContentCache[ch.id] = data?.content || "";
 }
 if (currentChapters[currentChIndex]?.id !== ch.id) return;
 document.getElementById("readerChContent").textContent = chapterContentCache[ch.id];
+loadComments(ch.id);
 const body = document.getElementById("readerBody");
 requestAnimationFrame(() => {
 const saved = localStorage.getItem("scrollpos_" + ch.id);

@@ -18,6 +18,13 @@
 <p>منصتك لقراءة ونشر الروايات</p>
 </div>
 <div id="authBox" class="auth-box">
+<div id="userRankBadge" class="user-rank-badge hidden">
+<div class="rank-badge-icons">
+<img id="rankBadgeAvatar" class="rank-badge-avatar" src="" alt="">
+<img id="rankBadgeImg" class="rank-badge-icon" src="" alt="">
+</div>
+<span id="rankBadgeName" class="rank-badge-label"></span>
+</div>
 <button id="newsBellBtn" class="news-bell" onclick="openNews()">🔔<span id="newsDot" class="news-dot hidden"></span></button>
 <button id="loginBtn" onclick="showAuth('login')">دخول</button>
 <button id="signupBtn" onclick="showAuth('signup')">حساب جديد</button>
@@ -92,6 +99,14 @@
 <script async data-cfasync="false" src="https://pl31174834.profitableratecpmnetwork.com/16862be26721288d37d8fc1d7d7cfba0/invoke.js"></script>
 <div id="container-16862be26721288d37d8fc1d7d7cfba0"></div>
 </div>
+<div class="comments-section">
+<h3 style="color:#a78bfa;margin-bottom:10px;">💬 التعليقات</h3>
+<div id="commentsList"></div>
+<div id="commentBox">
+<textarea id="commentInput" placeholder="اكتب تعليقك..."></textarea>
+<button class="btn-primary" onclick="submitComment()">إرسال</button>
+</div>
+</div>
 </div>
 <div class="reader-footer">
 <button id="prevChBtn" class="nav-btn">➡️ السابق</button>
@@ -126,6 +141,7 @@
 <button onclick="openLibrary()"><span>📚</span><small>المكتبة</small></button>
 <button class="active" onclick="goHome()"><span>🏠</span><small>الرئيسية</small></button>
 </nav>
+<input type="file" id="coverFileInput" accept="image/*" class="hidden" onchange="handleCoverFileChange(event)">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="config.js"></script>
 <script src="script.js"></script>

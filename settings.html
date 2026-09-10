@@ -32,8 +32,8 @@
 </div>
 <p style="color:#4ade80; margin-bottom:15px; text-align:center;">مرحباً <span id="meName"></span></p>
 <h3 style="color:#a78bfa; margin:15px 0 8px;">الصورة الشخصية</h3>
-<input type="text" id="avatarUrl" placeholder="رابط الصورة (URL)">
-<button class="btn-primary" onclick="saveAvatar()">حفظ الصورة</button>
+<input type="file" id="avatarFile" accept="image/*" style="margin-bottom:10px;color:#94a3b8;">
+<button class="btn-primary" onclick="saveAvatar()">رفع الصورة</button>
 <p id="avatarMsg" style="margin-top:8px;"></p>
 <h3 style="color:#a78bfa; margin:20px 0 8px;">تغيير الكود السري</h3>
 <input type="password" id="newCode" placeholder="الكود السري الجديد">
@@ -51,7 +51,6 @@ me = profile;
 document.getElementById("gate").classList.add("hidden");
 document.getElementById("settingsPanel").classList.remove("hidden");
 document.getElementById("meName").textContent = me.username;
-document.getElementById("avatarUrl").value = me.avatar_url || "";
 updateAvatarPreview(me.avatar_url);
 }
 function updateAvatarPreview(url) {
@@ -76,14 +75,22 @@ const { data: profile } = await supabaseClient.from("profiles").select("*").eq("
 showMe(profile);
 }
 async function saveAvatar() {
-const url = document.getElementById("avatarUrl").value.trim();
+const fileInput = document.getElementById("avatarFile");
 const msg = document.getElementById("avatarMsg");
-const { error } = await supabaseClient.from("profiles").update({ avatar_url: url || null }).eq("id", me.id);
+if (!fileInput.files.length) { msg.style.color = "#f87171"; msg.textContent = "اختر صورة أولاً"; return; }
+const file = fileInput.files[0];
+const path = `${me.id}_${Date.now()}_${file.name}`;
+const { error: upErr } = await supabaseClient.storage.from("avatars").upload(path, file, { upsert: true });
+if (upErr) { msg.style.color = "#f87171"; msg.textContent = "فشل الرفع: " + upErr.message; return; }
+const { data: pub } = supabaseClient.storage.from("avatars").getPublicUrl(path);
+const url = pub.publicUrl;
+const { error } = await supabaseClient.from("profiles").update({ avatar_url: url }).eq("id", me.id);
 if (error) { msg.style.color = "#f87171"; msg.textContent = "خطأ: " + error.message; return; }
 me.avatar_url = url;
 updateAvatarPreview(url);
+fileInput.value = "";
 msg.style.color = "#4ade80";
-msg.textContent = "تم حفظ الصورة ✅";
+msg.textContent = "تم رفع الصورة ✅";
 }
 async function changeCode() {
 const newCode = document.getElementById("newCode").value.trim();
