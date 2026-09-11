@@ -13,11 +13,10 @@
 <div class="splash-sub">منصتك لقراءة ونشر الروايات</div>
 </div>
 <header class="header">
+<button class="hamburger-btn" onclick="toggleSidebar()">☰</button>
 <div class="logo">
 <h1>📖 الجريدة الأدبية</h1>
 <p>منصتك لقراءة ونشر الروايات</p>
-</div>
-<div id="authBox" class="auth-box">
 <div id="userRankBadge" class="user-rank-badge hidden">
 <div class="rank-badge-icons">
 <img id="rankBadgeAvatar" class="rank-badge-avatar" src="" alt="">
@@ -25,15 +24,26 @@
 </div>
 <span id="rankBadgeName" class="rank-badge-label"></span>
 </div>
+</div>
+<div id="authBox" class="auth-box">
 <button id="newsBellBtn" class="news-bell" onclick="openNews()">🔔<span id="newsDot" class="news-dot hidden"></span></button>
-<button id="loginBtn" onclick="showAuth('login')">دخول</button>
-<button id="signupBtn" onclick="showAuth('signup')">حساب جديد</button>
-<span id="userBadge" class="hidden"></span>
-<a id="adminLink" href="admin.html" class="hidden">لوحة الإدارة</a>
-<a id="settingsLink" href="settings.html" class="hidden">الإعدادات</a>
-<button id="logoutBtn" class="hidden" onclick="logout()">خروج</button>
 </div>
 </header>
+<div id="sidebarOverlay" class="sidebar-overlay hidden" onclick="closeSidebar()"></div>
+<aside id="sidebar" class="sidebar">
+<button class="close-sidebar" onclick="closeSidebar()">×</button>
+<div id="sidebarUser" class="sidebar-user hidden"></div>
+<button id="sbLoginBtn" onclick="closeSidebar(); showAuth('login')">دخول</button>
+<button id="sbSignupBtn" onclick="closeSidebar(); showAuth('signup')">حساب جديد</button>
+<a id="sbSettingsLink" href="settings.html" class="hidden">⚙️ الإعدادات</a>
+<a id="sbAdminLink" href="admin.html" class="hidden">🛠️ لوحة الإدارة</a>
+<div id="sbAdminExtras" class="hidden">
+<a href="admin.html#novelsAdminSection">📚 نشر الروايات</a>
+<a href="admin.html#reportsAdminSection">🚩 البلاغات</a>
+<a href="admin.html#newsAdminSection">📢 نشر الأخبار</a>
+</div>
+<button id="sbLogoutBtn" class="hidden" onclick="closeSidebar(); logout()">🚪 تسجيل الخروج</button>
+</aside>
 <div class="search-bar">
 <input type="text" id="searchInput" placeholder="🔍 ابحث عن رواية أو مؤلف...">
 </div>

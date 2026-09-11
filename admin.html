@@ -27,7 +27,7 @@
 <div id="adminPanel" class="admin-wrap hidden">
 <h1 style="color:#a78bfa;">لوحة الإدارة</h1>
 <p style="color:#4ade80;">مرحباً <span id="adminName"></span> — <a href="index.html" style="color:#a78bfa;">عرض الموقع</a></p>
-<div class="admin-section">
+<div class="admin-section" id="novelsAdminSection">
 <h2>➕ إضافة رواية جديدة</h2>
 <input type="text" id="newTitle" placeholder="عنوان الرواية">
 <input type="text" id="newAuthor" placeholder="اسم المؤلف">
@@ -69,7 +69,7 @@
 <h2>🗂️ فصول الرواية المختارة</h2>
 <div id="adminChaptersList"></div>
 </div>
-<div class="admin-section">
+<div class="admin-section" id="newsAdminSection">
 <h2>📢 إرسال خبر لجميع المستخدمين</h2>
 <input type="text" id="newsTitle" placeholder="عنوان الخبر">
 <textarea id="newsContent" placeholder="نص الخبر" style="min-height:100px;"></textarea>
@@ -77,7 +77,7 @@
 <p id="newsMsg" style="color:#4ade80;margin-top:8px;"></p>
 <div id="adminNewsList" style="margin-top:15px;"></div>
 </div>
-<div class="admin-section">
+<div class="admin-section" id="reportsAdminSection">
 <h2>🚩 البلاغات</h2>
 <div id="adminReportsList"></div>
 </div>
@@ -109,6 +109,11 @@ await loadCategories();
 await loadNovelsAdmin();
 await loadNewsAdmin();
 await loadReportsAdmin();
+if (location.hash) {
+setTimeout(() => {
+document.querySelector(location.hash)?.scrollIntoView({ behavior: "smooth" });
+}, 150);
+}
 }
 async function loadCategories() {
 const { data } = await supabaseClient.from("categories").select("*").order("id");

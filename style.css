@@ -202,3 +202,17 @@ body { padding-bottom:70px; }
 .comment-time { color:#64748b; font-size:0.7rem; }
 .comment-body p { color:#e2e8f0; font-size:0.85rem; line-height:1.6; white-space:pre-wrap; }
 #commentBox textarea { width:100%; min-height:70px; padding:10px; background:#1e293b; border:1px solid #334155; color:white; border-radius:8px; margin-bottom:8px; resize:vertical; }
+
+/* ===== الشريط الجانبي ===== */
+.hamburger-btn { background:none; border:none; color:#a78bfa; font-size:1.7rem; cursor:pointer; padding:2px 8px; order:-1; }
+.logo { display:flex; flex-direction:column; align-items:flex-start; gap:4px; }
+.user-rank-badge { flex-direction:row !important; align-items:center; gap:6px; margin-top:4px; }
+.rank-badge-label { font-size:0.7rem; }
+.sidebar-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:998; }
+.sidebar { position:fixed; top:0; right:0; height:100%; width:250px; max-width:80vw; background:#111827; border-left:1px solid #334155; z-index:999; padding:20px 16px; display:flex; flex-direction:column; gap:10px; transform:translateX(100%); transition:transform 0.25s ease; overflow-y:auto; }
+.sidebar.open { transform:translateX(0); }
+.close-sidebar { align-self:flex-start; background:#dc2626; color:#fff; border:none; padding:4px 12px; border-radius:6px; cursor:pointer; margin-bottom:6px; }
+.sidebar a, .sidebar > button { display:block; width:100%; text-align:right; background:#1e293b; color:#a78bfa; border:1px solid #334155; padding:10px 14px; border-radius:8px; text-decoration:none; cursor:pointer; font-size:0.9rem; }
+.sidebar a:hover, .sidebar > button:hover { background:#7c3aed; color:#fff; }
+.sidebar-user { color:#4ade80; font-weight:bold; padding-bottom:10px; border-bottom:1px solid #334155; margin-bottom:4px; }
+#sbAdminExtras { display:flex; flex-direction:column; gap:8px; padding-top:6px; border-top:1px solid #334155; margin-top:4px; }

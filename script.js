@@ -99,19 +99,29 @@ updateAuthUI();
 }
 }
 function updateAuthUI() {
-document.getElementById("loginBtn").classList.toggle("hidden", !!currentUser);
-document.getElementById("signupBtn").classList.toggle("hidden", !!currentUser);
-document.getElementById("logoutBtn").classList.toggle("hidden", !currentUser);
-document.getElementById("adminLink").classList.toggle("hidden", !currentUser);
-document.getElementById("settingsLink").classList.toggle("hidden", !currentUser);
-const badge = document.getElementById("userBadge");
+document.getElementById("sbLoginBtn").classList.toggle("hidden", !!currentUser);
+document.getElementById("sbSignupBtn").classList.toggle("hidden", !!currentUser);
+document.getElementById("sbLogoutBtn").classList.toggle("hidden", !currentUser);
+document.getElementById("sbSettingsLink").classList.toggle("hidden", !currentUser);
+document.getElementById("sbAdminLink").classList.toggle("hidden", !currentUser);
+const uname = currentUser ? (currentUser.username || "").toLowerCase() : "";
+document.getElementById("sbAdminExtras").classList.toggle("hidden", !FOUNDER_USERNAMES.includes(uname));
+const sidebarUser = document.getElementById("sidebarUser");
 if (currentUser) {
-badge.textContent = "مرحباً، " + currentUser.username + (currentUser.is_admin ? " (أدمن)" : "");
-badge.classList.remove("hidden");
+sidebarUser.textContent = "مرحباً، " + currentUser.username + (currentUser.is_admin ? " (أدمن)" : "");
+sidebarUser.classList.remove("hidden");
 } else {
-badge.classList.add("hidden");
+sidebarUser.classList.add("hidden");
 }
 updateRankBadge();
+}
+function toggleSidebar() {
+document.getElementById("sidebar").classList.toggle("open");
+document.getElementById("sidebarOverlay").classList.toggle("hidden");
+}
+function closeSidebar() {
+document.getElementById("sidebar").classList.remove("open");
+document.getElementById("sidebarOverlay").classList.add("hidden");
 }
 function showAuth(mode) {
 authMode = mode;
