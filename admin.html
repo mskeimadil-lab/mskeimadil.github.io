@@ -171,8 +171,22 @@ const chapter_number = numMatch ? parseInt(numMatch[0]) : (i + 1);
 chaptersToInsert.push({ novel_id, chapter_number, title, content });
 }
 status.textContent = `جاري رفع ${chaptersToInsert.length} فصل...`;
-const { error } = await supabaseClient.from("chapters").insert(chaptersToInsert);
-if (error) { status.style.color = "#f87171"; status.textContent = "خطأ: " + error.message; return; }
+const BATCH_SIZE = 100;
+let uploaded = 0;
+for (let b = 0; b < chaptersToInsert.length; b += BATCH_SIZE) {
+const batch = chaptersToInsert.slice(b, b + BATCH_SIZE);
+const { error } = await supabaseClient.from("chapters").insert(batch);
+if (error) {
+status.style.color = "#f87171";
+status.textContent = `تم رفع ${uploaded} فصل بنجاح، ثم توقف بخطأ: ${error.message}`;
+await loadChaptersAdmin(novel_id);
+await loadNovelsAdmin();
+return;
+}
+uploaded += batch.length;
+status.style.color = "#a78bfa";
+status.textContent = `جاري الرفع... ${uploaded} / ${chaptersToInsert.length}`;
+}
 status.style.color = "#4ade80";
 status.textContent = `✅ تم استيراد ${chaptersToInsert.length} فصل بنجاح`;
 fileInput.value = "";
