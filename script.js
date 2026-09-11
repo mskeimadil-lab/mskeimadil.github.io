@@ -349,7 +349,7 @@ const content = input.value.trim();
 if (!content) return;
 const ch = currentChapters[currentChIndex];
 const { error } = await supabaseClient.from("comments").insert({
-chapter_id: ch.id, novel_id: currentNovel.id, user_id: currentUser.id, content
+chapter_id: ch.id, novel_id: currentNovel.id, user_id: currentUser.id, content, username: currentUser.username
 });
 if (error) { alert("خطأ: " + error.message); return; }
 input.value = "";
