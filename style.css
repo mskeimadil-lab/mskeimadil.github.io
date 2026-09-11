@@ -171,7 +171,7 @@ body { padding-bottom:70px; }
 .bottom-nav button span { font-size:1.2rem; }
 .bottom-nav button.active { color:#a78bfa; }
 .novel-row-cover { position:relative; }
-.cover-edit-btn { position:absolute; top:-6px; left:-6px; width:26px; height:26px; border-radius:50%; background:#7c3aed; color:#fff; border:2px solid #0f172a; font-size:1rem; font-weight:bold; cursor:pointer; display:flex; align-items:center; justify-content:center; line-height:1; }
+.cover-edit-btn { position:absolute; top:-6px; right:-6px; width:26px; height:26px; border-radius:50%; background:#7c3aed; color:#fff; border:2px solid #0f172a; font-size:1rem; font-weight:bold; cursor:pointer; display:flex; align-items:center; justify-content:center; line-height:1; }
 
 /* ===== تقسيم الفصول لمجموعات (لتسريع فتح الروايات الطويلة) ===== */
 .chapter-group { margin-bottom: 8px; border: 1px solid #334155; border-radius: 8px; overflow: hidden; }
