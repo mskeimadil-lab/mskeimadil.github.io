@@ -360,6 +360,8 @@ async function openChapterDirect(novelId, chapterId) {
 currentNovel = allNovels.find(n => n.id === novelId);
 if (!currentNovel) return;
 supabaseClient.rpc('increment_views', { target_id: novelId });
+currentNovel.views = (currentNovel.views || 0) + 1;
+renderNovels();
 const { data: chapters } = await supabaseClient
 .from("chapters").select("id, chapter_number, title").eq("novel_id", novelId).order("chapter_number");
 currentChapters = chapters || [];
@@ -370,6 +372,8 @@ async function openNovel(id) {
 currentNovel = allNovels.find(n => n.id === id);
 if (!currentNovel) return;
 supabaseClient.rpc('increment_views', { target_id: id });
+currentNovel.views = (currentNovel.views || 0) + 1;
+renderNovels();
 document.getElementById("detailCover").src = currentNovel.cover_url || "https://via.placeholder.com/300x400?text=No+Cover";
 document.getElementById("detailTitle").textContent = currentNovel.title;
 document.getElementById("detailAuthor").textContent = "✍️ " + (currentNovel.author || "غير معروف");
