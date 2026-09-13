@@ -355,13 +355,21 @@ if (error) { alert("خطأ: " + error.message); return; }
 input.value = "";
 await loadComments(ch.id);
 }
+function shouldCountView(novelId) {
+const key = "viewed_" + novelId;
+if (sessionStorage.getItem(key)) return false;
+sessionStorage.setItem(key, "1");
+return true;
+}
 let chapterContentCache = {};
 async function openChapterDirect(novelId, chapterId) {
 currentNovel = allNovels.find(n => n.id === novelId);
 if (!currentNovel) return;
+if (shouldCountView(novelId)) {
 supabaseClient.rpc('increment_views', { target_id: novelId });
 currentNovel.views = (currentNovel.views || 0) + 1;
 renderNovels();
+}
 const { data: chapters } = await supabaseClient
 .from("chapters").select("id, chapter_number, title").eq("novel_id", novelId).order("chapter_number");
 currentChapters = chapters || [];
@@ -371,9 +379,11 @@ openChapter(idx >= 0 ? idx : 0);
 async function openNovel(id) {
 currentNovel = allNovels.find(n => n.id === id);
 if (!currentNovel) return;
+if (shouldCountView(id)) {
 supabaseClient.rpc('increment_views', { target_id: id });
 currentNovel.views = (currentNovel.views || 0) + 1;
 renderNovels();
+}
 document.getElementById("detailCover").src = currentNovel.cover_url || "https://via.placeholder.com/300x400?text=No+Cover";
 document.getElementById("detailTitle").textContent = currentNovel.title;
 document.getElementById("detailAuthor").textContent = "✍️ " + (currentNovel.author || "غير معروف");
