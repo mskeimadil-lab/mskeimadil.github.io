@@ -15,16 +15,34 @@ HEADERS = {
 }
 
 def clean_page_junk(soup):
-    for tag in soup(["script", "style", "a", "iframe", "ins", "button", "header", "footer", "nav", "aside"]):
+    # إزالة الصور والإعلانات ونوافذ التسجيل والعناصر التفاعلية
+    for tag in soup(["script", "style", "a", "iframe", "ins", "button", "header", "footer", "nav", "aside", "img", "figure", "picture", "svg", "form", "input"]):
         tag.decompose()
-    for tag in soup.find_all(class_=re.compile(r'(modal|menu|sidebar|theme|header|footer|nav|widget)')):
+    
+    # إزالة العناصر الإعلانية والمنبثقة حسب اسم الكلاس أو المعرف
+    for tag in soup.find_all(class_=re.compile(r'(modal|menu|sidebar|theme|header|footer|nav|widget|ad|banner|social|share|login|google|comment|related|pay|gem|code-block)', re.I)):
         tag.decompose()
 
 def clean_content(soup_box):
     clean_page_junk(soup_box)
-    text = soup_box.get_text(separator="\n")
-    lines = [line.strip() for line in text.splitlines() if line.strip()]
-    return "\n\n".join(lines)
+    
+    paragraphs = []
+    p_tags = soup_box.find_all('p')
+    
+    # تصفية الفقرات لاستخراج نص الرواية وتجاهل العبارات التسويقية
+    if p_tags:
+        for p in p_tags:
+            txt = p.get_text().strip()
+            if len(txt) > 5 and not any(junk in txt for junk in ["Sign in", "Google", "USD", "جوهرة", "فضاء الروايات", "إعلان", "Terms of Service"]):
+                paragraphs.append(txt)
+    
+    if not paragraphs:
+        text = soup_box.get_text(separator="\n")
+        lines = [line.strip() for line in text.splitlines() if line.strip() and len(line.strip()) > 10]
+        lines = [l for l in lines if not any(junk in l for junk in ["Sign in", "Google", "USD", "جوهرة", "فضاء الروايات", "إعلان"])]
+        return "\n\n".join(lines)
+        
+    return "\n\n".join(paragraphs)
 
 def ensure_novel_exists(novel_id, title):
     try:
@@ -54,8 +72,10 @@ def fetch_and_save_chapter(novel_id, chapter_num, chapter_url):
         if not title_el:
             title_el = soup.find('h1', class_=re.compile(r'(entry-title|post-title|chapter-title)'))
         
-        title = title_el.text.strip() if title_el else f"الفصل {chapter_num}"
-        if "مظهر الموقع" in title or "الحساب" in title:
+        raw_title = title_el.text.strip() if title_el else ""
+        if raw_title and not any(bad in raw_title for bad in ["Sign in", "مظهر الموقع", "الحساب", "Google"]):
+            title = raw_title
+        else:
             title = f"الفصل {chapter_num}"
 
         clean_text = clean_content(content_box)
@@ -67,11 +87,10 @@ def fetch_and_save_chapter(novel_id, chapter_num, chapter_url):
             "content": clean_text
         }
 
-        # فحص ما إذا كان الفصل موجوداً لتحديثه أو إضافته
         existing = supabase.table("chapters").select("id").eq("novel_id", novel_id).eq("chapter_number", chapter_num).execute()
         if existing.data and len(existing.data) > 0:
             supabase.table("chapters").update(data).eq("novel_id", novel_id).eq("chapter_number", chapter_num).execute()
-            print(f"🔄 تم تحديث الفصل {chapter_num}: {title}")
+            print(f"🔄 تم تنظيف وتحديث الفصل {chapter_num}: {title}")
         else:
             supabase.table("chapters").insert(data).execute()
             print(f"✅ تم حفظ الفصل {chapter_num}: {title}")
@@ -90,7 +109,7 @@ def process_novel_chapters(novel_id, novel_url):
             novel_title = soup.find(['h1', 'h2'])
         
         novel_title_text = novel_title.text.strip() if novel_title else "Solo Leveling"
-        if "مظهر الموقع" in novel_title_text:
+        if any(bad in novel_title_text for bad in ["مظهر الموقع", "Sign in"]):
             novel_title_text = "Solo Leveling"
             
         ensure_novel_exists(novel_id, novel_title_text)
