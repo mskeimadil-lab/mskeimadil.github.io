@@ -14,9 +14,15 @@ HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
 }
 
-def clean_content(soup_box):
-    for tag in soup_box(["script", "style", "a", "iframe", "ins", "button"]):
+def clean_page_junk(soup):
+    # إزالة عناصر القوائم والمظهر والنوافذ المنبثقة والهيدر والفوتر
+    for tag in soup(["script", "style", "a", "iframe", "ins", "button", "header", "footer", "nav", "aside"]):
         tag.decompose()
+    for tag in soup.find_all(class_=re.compile(r'(modal|menu|sidebar|theme|header|footer|nav|widget)')):
+        tag.decompose()
+
+def clean_content(soup_box):
+    clean_page_junk(soup_box)
     text = soup_box.get_text(separator="\n")
     lines = [line.strip() for line in text.splitlines() if line.strip()]
     return "\n\n".join(lines)
@@ -31,30 +37,27 @@ def ensure_novel_exists(novel_id, title):
     except Exception as e:
         print(f"⚠️ تعذر حفظ الرواية في جدول novels: {e}")
 
-def chapter_exists(novel_id, ch_num):
-    try:
-        res = supabase.table("chapters").select("id").eq("novel_id", novel_id).eq("chapter_number", ch_num).execute()
-        return len(res.data) > 0
-    except Exception:
-        return False
-
 def fetch_and_save_chapter(novel_id, chapter_num, chapter_url):
-    if chapter_exists(novel_id, chapter_num):
-        print(f"⏩ الفصل {chapter_num} موجود مسبقاً، تم التجاوز.")
-        return
-
     try:
         res = requests.get(chapter_url, headers=HEADERS, timeout=15)
         if res.status_code != 200:
             return
 
         soup = BeautifulSoup(res.text, 'html.parser')
-        title_el = soup.find(['h1', 'h2'])
-        title = title_el.text.strip() if title_el else f"الفصل {chapter_num}"
 
-        content_box = soup.find('div', class_=re.compile(r'(entry-content|chapter-content|reading-content|text-left|post-body)'))
+        # البحث عن محتوى الفصل الفعلي أولاً
+        content_box = soup.find('div', class_=re.compile(r'(entry-content|chapter-content|reading-content|text-left|post-body|epcontent)'))
         if not content_box:
             content_box = soup.find('article') or soup
+
+        # استخراج العنوان الصحيح من داخل محتوى المقال وتجنب الهيدر
+        title_el = content_box.find(['h1', 'h2']) if content_box else None
+        if not title_el:
+            title_el = soup.find('h1', class_=re.compile(r'(entry-title|post-title|chapter-title)'))
+        
+        title = title_el.text.strip() if title_el else f"الفصل {chapter_num}"
+        if "مظهر الموقع" in title or "الحساب" in title:
+            title = f"الفصل {chapter_num}"
 
         clean_text = clean_content(content_box)
 
@@ -64,8 +67,10 @@ def fetch_and_save_chapter(novel_id, chapter_num, chapter_url):
             "title": title,
             "content": clean_text
         }
-        supabase.table("chapters").insert(data).execute()
-        print(f"✅ تم حفظ الفصل {chapter_num}: {title}")
+        
+        # استخدام upsert لتحديث البيانات القديمة الخاطئة
+        supabase.table("chapters").upsert(data, on_conflict="novel_id,chapter_number").execute()
+        print(f"✅ تم تحديث/حفظ الفصل {chapter_num}: {title}")
 
     except Exception as e:
         print(f"❌ خطأ أثناء حفظ الفصل {chapter_num}: {e}")
@@ -76,12 +81,19 @@ def process_novel_chapters(novel_id, novel_url):
         res = requests.get(novel_url, headers=HEADERS, timeout=15)
         soup = BeautifulSoup(res.text, 'html.parser')
         
-        novel_title = soup.find(['h1', 'h2'])
+        # استخراج عنوان الرواية من صفحة الرواية الرئيسية
+        novel_title = soup.find('h1', class_=re.compile(r'(entry-title|post-title|novel-title)'))
+        if not novel_title:
+            novel_title = soup.find(['h1', 'h2'])
+        
         novel_title_text = novel_title.text.strip() if novel_title else "Solo Leveling"
+        if "مظهر الموقع" in novel_title_text:
+            novel_title_text = "Solo Leveling"
+            
         ensure_novel_exists(novel_id, novel_title_text)
 
         chapter_links = []
-        ignored_paths = ['/category/', '/tag/', '/privacy-policy/', '/contact/', '/about/']
+        ignored_paths = ['/category/', '/tag/', '/privacy-policy/', '/contact/', '/about/', '/manga/']
         
         for a in soup.find_all('a', href=True):
             full_url = urljoin(novel_url, a['href'])
