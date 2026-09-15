@@ -21,12 +21,11 @@ def clean_content(soup_box):
     lines = [line.strip() for line in text.splitlines() if line.strip()]
     return "\n\n".join(lines)
 
-def ensure_novel_exists(novel_id, title, url):
+def ensure_novel_exists(novel_id, title):
     try:
         supabase.table("novels").upsert({
             "id": novel_id,
-            "title": title,
-            "url": url
+            "title": title
         }).execute()
         print(f"📖 تم التأكد من وجود الرواية: {title}")
     except Exception as e:
@@ -79,7 +78,7 @@ def process_novel_chapters(novel_id, novel_url):
         
         novel_title = soup.find(['h1', 'h2'])
         novel_title_text = novel_title.text.strip() if novel_title else "Solo Leveling"
-        ensure_novel_exists(novel_id, novel_title_text, novel_url)
+        ensure_novel_exists(novel_id, novel_title_text)
 
         chapter_links = []
         ignored_paths = ['/category/', '/tag/', '/privacy-policy/', '/contact/', '/about/']
