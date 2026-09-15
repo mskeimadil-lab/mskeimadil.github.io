@@ -21,6 +21,17 @@ def clean_content(soup_box):
     lines = [line.strip() for line in text.splitlines() if line.strip()]
     return "\n\n".join(lines)
 
+def ensure_novel_exists(novel_id, title, url):
+    try:
+        supabase.table("novels").upsert({
+            "id": novel_id,
+            "title": title,
+            "url": url
+        }).execute()
+        print(f"📖 تم التأكد من وجود الرواية: {title}")
+    except Exception as e:
+        print(f"⚠️ تعذر حفظ الرواية في جدول novels: {e}")
+
 def chapter_exists(novel_id, ch_num):
     try:
         res = supabase.table("chapters").select("id").eq("novel_id", novel_id).eq("chapter_number", ch_num).execute()
@@ -66,13 +77,15 @@ def process_novel_chapters(novel_id, novel_url):
         res = requests.get(novel_url, headers=HEADERS, timeout=15)
         soup = BeautifulSoup(res.text, 'html.parser')
         
+        novel_title = soup.find(['h1', 'h2'])
+        novel_title_text = novel_title.text.strip() if novel_title else "Solo Leveling"
+        ensure_novel_exists(novel_id, novel_title_text, novel_url)
+
         chapter_links = []
         ignored_paths = ['/category/', '/tag/', '/privacy-policy/', '/contact/', '/about/']
         
         for a in soup.find_all('a', href=True):
             full_url = urljoin(novel_url, a['href'])
-            
-            # التقاط الروابط التابعة للموقع والتي تحتوي على أرقام أو فصول
             if "cenele.com" in full_url and full_url.strip('/') != novel_url.strip('/'):
                 if not any(path in full_url for path in ignored_paths):
                     if full_url not in chapter_links:
