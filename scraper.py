@@ -67,16 +67,21 @@ def process_novel_chapters(novel_id, novel_url):
         soup = BeautifulSoup(res.text, 'html.parser')
         
         chapter_links = []
+        ignored_paths = ['/category/', '/tag/', '/privacy-policy/', '/contact/', '/about/']
+        
         for a in soup.find_all('a', href=True):
             full_url = urljoin(novel_url, a['href'])
-            # التقاط الروابط التابعة لمسار الرواية
-            if full_url.startswith(novel_url) and full_url.strip('/') != novel_url.strip('/') and full_url not in chapter_links:
-                chapter_links.append(full_url)
+            
+            # التقاط الروابط التابعة للموقع والتي تحتوي على أرقام أو فصول
+            if "cenele.com" in full_url and full_url.strip('/') != novel_url.strip('/'):
+                if not any(path in full_url for path in ignored_paths):
+                    if full_url not in chapter_links:
+                        chapter_links.append(full_url)
 
         print(f"📊 تم العثور على {len(chapter_links)} رابط فصل.")
 
         for index, url in enumerate(chapter_links, start=1):
-            match = re.search(r'(\d+)', url.replace(novel_url, ''))
+            match = re.search(r'(\d+)', url.replace('https://cenele.com/', ''))
             ch_num = int(match.group(1)) if match else index
             fetch_and_save_chapter(novel_id, ch_num, url)
 
