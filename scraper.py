@@ -15,7 +15,6 @@ HEADERS = {
 }
 
 def clean_page_junk(soup):
-    # إزالة عناصر القوائم والمظهر والنوافذ المنبثقة والهيدر والفوتر
     for tag in soup(["script", "style", "a", "iframe", "ins", "button", "header", "footer", "nav", "aside"]):
         tag.decompose()
     for tag in soup.find_all(class_=re.compile(r'(modal|menu|sidebar|theme|header|footer|nav|widget)')):
@@ -29,11 +28,13 @@ def clean_content(soup_box):
 
 def ensure_novel_exists(novel_id, title):
     try:
-        supabase.table("novels").upsert({
-            "id": novel_id,
-            "title": title
-        }).execute()
-        print(f"📖 تم التأكد من وجود الرواية: {title}")
+        res = supabase.table("novels").select("id").eq("id", novel_id).execute()
+        if not res.data:
+            supabase.table("novels").insert({"id": novel_id, "title": title}).execute()
+            print(f"📖 تم إنشاء الرواية: {title}")
+        else:
+            supabase.table("novels").update({"title": title}).eq("id", novel_id).execute()
+            print(f"📖 تم التأكد من وجود الرواية: {title}")
     except Exception as e:
         print(f"⚠️ تعذر حفظ الرواية في جدول novels: {e}")
 
@@ -45,12 +46,10 @@ def fetch_and_save_chapter(novel_id, chapter_num, chapter_url):
 
         soup = BeautifulSoup(res.text, 'html.parser')
 
-        # البحث عن محتوى الفصل الفعلي أولاً
         content_box = soup.find('div', class_=re.compile(r'(entry-content|chapter-content|reading-content|text-left|post-body|epcontent)'))
         if not content_box:
             content_box = soup.find('article') or soup
 
-        # استخراج العنوان الصحيح من داخل محتوى المقال وتجنب الهيدر
         title_el = content_box.find(['h1', 'h2']) if content_box else None
         if not title_el:
             title_el = soup.find('h1', class_=re.compile(r'(entry-title|post-title|chapter-title)'))
@@ -67,13 +66,18 @@ def fetch_and_save_chapter(novel_id, chapter_num, chapter_url):
             "title": title,
             "content": clean_text
         }
-        
-        # استخدام upsert لتحديث البيانات القديمة الخاطئة
-        supabase.table("chapters").upsert(data, on_conflict="novel_id,chapter_number").execute()
-        print(f"✅ تم تحديث/حفظ الفصل {chapter_num}: {title}")
+
+        # فحص ما إذا كان الفصل موجوداً لتحديثه أو إضافته
+        existing = supabase.table("chapters").select("id").eq("novel_id", novel_id).eq("chapter_number", chapter_num).execute()
+        if existing.data and len(existing.data) > 0:
+            supabase.table("chapters").update(data).eq("novel_id", novel_id).eq("chapter_number", chapter_num).execute()
+            print(f"🔄 تم تحديث الفصل {chapter_num}: {title}")
+        else:
+            supabase.table("chapters").insert(data).execute()
+            print(f"✅ تم حفظ الفصل {chapter_num}: {title}")
 
     except Exception as e:
-        print(f"❌ خطأ أثناء حفظ الفصل {chapter_num}: {e}")
+        print(f"❌ خطأ أثناء حفظ/تحديث الفصل {chapter_num}: {e}")
 
 def process_novel_chapters(novel_id, novel_url):
     print(f"\n🔍 فحص الفصول من: {novel_url}")
@@ -81,7 +85,6 @@ def process_novel_chapters(novel_id, novel_url):
         res = requests.get(novel_url, headers=HEADERS, timeout=15)
         soup = BeautifulSoup(res.text, 'html.parser')
         
-        # استخراج عنوان الرواية من صفحة الرواية الرئيسية
         novel_title = soup.find('h1', class_=re.compile(r'(entry-title|post-title|novel-title)'))
         if not novel_title:
             novel_title = soup.find(['h1', 'h2'])
