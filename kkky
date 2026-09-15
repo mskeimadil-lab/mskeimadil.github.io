@@ -1,0 +1,57 @@
+import requests
+
+# البيانات الحقيقية لمشروعك مباشرة
+SUPABASE_URL = "https://hazelnnjmkpkyrmanmcc.supabase.co"
+SUPABASE_KEY = "sb_publishable_ONb5KEgVhZ1_mYGaZZVqxg_K0pibuln"
+
+HEADERS = {
+    "apikey": SUPABASE_KEY,
+    "Authorization": f"Bearer {SUPABASE_KEY}",
+    "Content-Type": "application/json",
+    "Prefer": "return=representation"
+}
+
+def create_novel(title, description, cover_url, category_id=1):
+    url = f"{SUPABASE_URL}/rest/v1/novels"
+    payload = {
+        "title": title,
+        "description": description,
+        "cover_url": cover_url,
+        "category_id": category_id,
+        "views": 0
+    }
+    res = requests.post(url, headers=HEADERS, json=payload)
+    if res.status_code in [200, 201]:
+        novel_id = res.json()[0]['id']
+        print(f"✅ تم إضافة الرواية بنجاح: '{title}' (ID: {novel_id})")
+        return novel_id
+    else:
+        print(f"❌ خطأ أثناء الإضافة: {res.status_code} - {res.text}")
+        return None
+
+def add_chapter(novel_id, ch_num, title, text):
+    url = f"{SUPABASE_URL}/rest/v1/chapters"
+    payload = {
+        "novel_id": novel_id,
+        "chapter_number": ch_num,
+        "title": title,
+        "content": text
+    }
+    res = requests.post(url, headers=HEADERS, json=payload)
+    if res.status_code in [200, 201]:
+        print(f"   └─ 📖 تم إضافة الفصل {ch_num}: {title}")
+    else:
+        print(f"   └─ ❌ خطأ في إضافة الفصل: {res.status_code} - {res.text}")
+
+if __name__ == "__main__":
+    print("⚡ جاري الرفع التلقائي إلى Supabase...\n")
+    novel_id = create_novel(
+        title="رواية تجريبية جديدة",
+        description="وصف تلقائي للرواية تم رفعه بواسطة السكريبت",
+        cover_url="https://mskeimadil-lab.github.io/mskeimadil.github.io/assets/images/cover-placeholder.png"
+    )
+    if novel_id:
+        add_chapter(novel_id, 1, "الفصل الأول: بداية المشوار", "هنا يوضع نص الفصل الأول...")
+        add_chapter(novel_id, 2, "الفصل الثاني: الأحداث", "هنا يوضع نص الفصل الثاني...")
+        print("\n🎉 تمت العملية بنجاح!")
+
