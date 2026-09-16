@@ -1,142 +1,105 @@
 import os
 import re
+import uuid
 import requests
 from bs4 import BeautifulSoup
-from urllib.parse import urljoin
 from supabase import create_client
 
-SUPABASE_URL = os.environ.get("SUPABASE_URL", "https://hazelnnjmkpkyrmanmcc.supabase.co")
-SUPABASE_KEY = os.environ.get("SUPABASE_KEY", "")
-
+SUPABASE_URL = os.environ.get("SUPABASE_URL")
+SUPABASE_KEY = os.environ.get("SUPABASE_KEY")
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
 }
 
-def clean_page_junk(soup):
-    # إزالة الصور والإعلانات ونوافذ التسجيل والعناصر التفاعلية
-    for tag in soup(["script", "style", "a", "iframe", "ins", "button", "header", "footer", "nav", "aside", "img", "figure", "picture", "svg", "form", "input"]):
-        tag.decompose()
-    
-    # إزالة العناصر الإعلانية والمنبثقة حسب اسم الكلاس أو المعرف
-    for tag in soup.find_all(class_=re.compile(r'(modal|menu|sidebar|theme|header|footer|nav|widget|ad|banner|social|share|login|google|comment|related|pay|gem|code-block)', re.I)):
-        tag.decompose()
+BAD_WORDS = [
+    "Skip Ad", "ارتق بتجربتك", "VIP", "فضاء الروايات", 
+    "تحميل التطبيق", "انضم إلى سيرفر", "تليجرام", "Sign in"
+]
 
-def clean_content(soup_box):
-    clean_page_junk(soup_box)
+def clean_text(soup_obj):
+    # إزالة الأزرار والإعلانات المنبثقة والنصوص الترويجية
+    for tag in soup_obj.find_all(['script', 'style', 'iframe', 'button', 'form', 'a']):
+        if any(bad in tag.text for bad in BAD_WORDS) or 'ad' in tag.get('class', []):
+            tag.decompose()
+            
+    text = soup_obj.get_text(separator='\n')
+    lines = [line.strip() for line in text.splitlines() if line.strip()]
+    cleaned = '\n\n'.join(lines)
     
-    paragraphs = []
-    p_tags = soup_box.find_all('p')
-    
-    # تصفية الفقرات لاستخراج نص الرواية وتجاهل العبارات التسويقية
-    if p_tags:
-        for p in p_tags:
-            txt = p.get_text().strip()
-            if len(txt) > 5 and not any(junk in txt for junk in ["Sign in", "Google", "USD", "جوهرة", "فضاء الروايات", "إعلان", "Terms of Service"]):
-                paragraphs.append(txt)
-    
-    if not paragraphs:
-        text = soup_box.get_text(separator="\n")
-        lines = [line.strip() for line in text.splitlines() if line.strip() and len(line.strip()) > 10]
-        lines = [l for l in lines if not any(junk in l for junk in ["Sign in", "Google", "USD", "جوهرة", "فضاء الروايات", "إعلان"])]
-        return "\n\n".join(lines)
-        
-    return "\n\n".join(paragraphs)
+    for word in BAD_WORDS:
+        cleaned = re.sub(rf'.*{re.escape(word)}.*', '', cleaned)
+    return cleaned.strip()
 
-def ensure_novel_exists(novel_id, title):
+def fetch_auto_novels():
+    """جلب قائمة الروايات تلقائياً من صفحة المكتبة"""
+    url = "https://cenele.com/cont/"
     try:
-        res = supabase.table("novels").select("id").eq("id", novel_id).execute()
-        if not res.data:
-            supabase.table("novels").insert({"id": novel_id, "title": title}).execute()
-            print(f"📖 تم إنشاء الرواية: {title}")
-        else:
-            supabase.table("novels").update({"title": title}).eq("id", novel_id).execute()
-            print(f"📖 تم التأكد من وجود الرواية: {title}")
-    except Exception as e:
-        print(f"⚠️ تعذر حفظ الرواية في جدول novels: {e}")
-
-def fetch_and_save_chapter(novel_id, chapter_num, chapter_url):
-    try:
-        res = requests.get(chapter_url, headers=HEADERS, timeout=15)
-        if res.status_code != 200:
-            return
-
+        res = requests.get(url, headers=HEADERS, timeout=15)
         soup = BeautifulSoup(res.text, 'html.parser')
-
-        content_box = soup.find('div', class_=re.compile(r'(entry-content|chapter-content|reading-content|text-left|post-body|epcontent)'))
-        if not content_box:
-            content_box = soup.find('article') or soup
-
-        title_el = content_box.find(['h1', 'h2']) if content_box else None
-        if not title_el:
-            title_el = soup.find('h1', class_=re.compile(r'(entry-title|post-title|chapter-title)'))
-        
-        raw_title = title_el.text.strip() if title_el else ""
-        if raw_title and not any(bad in raw_title for bad in ["Sign in", "مظهر الموقع", "الحساب", "Google"]):
-            title = raw_title
-        else:
-            title = f"الفصل {chapter_num}"
-
-        clean_text = clean_content(content_box)
-
-        data = {
-            "novel_id": novel_id,
-            "chapter_number": chapter_num,
-            "title": title,
-            "content": clean_text
-        }
-
-        existing = supabase.table("chapters").select("id").eq("novel_id", novel_id).eq("chapter_number", chapter_num).execute()
-        if existing.data and len(existing.data) > 0:
-            supabase.table("chapters").update(data).eq("novel_id", novel_id).eq("chapter_number", chapter_num).execute()
-            print(f"🔄 تم تنظيف وتحديث الفصل {chapter_num}: {title}")
-        else:
-            supabase.table("chapters").insert(data).execute()
-            print(f"✅ تم حفظ الفصل {chapter_num}: {title}")
-
+        novels = []
+        for a in soup.find_all('a', href=True):
+            href = a['href']
+            if '/cont/' in href and href.strip('/') != 'https://cenele.com/cont':
+                full_url = href if href.startswith('http') else f"https://cenele.com{href}"
+                # توليد UUID ثابت وفريد بناءً على رابط الرواية
+                n_id = str(uuid.uuid5(uuid.NAMESPACE_URL, full_url))
+                if not any(n['url'] == full_url for n in novels):
+                    novels.append({'id': n_id, 'url': full_url})
+        return novels
     except Exception as e:
-        print(f"❌ خطأ أثناء حفظ/تحديث الفصل {chapter_num}: {e}")
+        print(f"❌ خطأ في جلب قائمة الروايات: {e}")
+        return []
 
-def process_novel_chapters(novel_id, novel_url):
-    print(f"\n🔍 فحص الفصول من: {novel_url}")
+def process_novel(novel_id, novel_url):
     try:
         res = requests.get(novel_url, headers=HEADERS, timeout=15)
         soup = BeautifulSoup(res.text, 'html.parser')
         
-        novel_title = soup.find('h1', class_=re.compile(r'(entry-title|post-title|novel-title)'))
-        if not novel_title:
-            novel_title = soup.find(['h1', 'h2'])
-        
-        novel_title_text = novel_title.text.strip() if novel_title else "Solo Leveling"
-        if any(bad in novel_title_text for bad in ["مظهر الموقع", "Sign in"]):
-            novel_title_text = "Solo Leveling"
-            
-        ensure_novel_exists(novel_id, novel_title_text)
+        title_el = soup.find('h1') or soup.find('title')
+        novel_title = title_el.text.strip() if title_el else "رواية جديدة"
+        for bad in BAD_WORDS:
+            novel_title = novel_title.replace(bad, '').strip()
 
+        # إضافة الرواية لقاعدة البيانات إن لم تكن موجودة
+        supabase.table('novels').upsert({'id': novel_id, 'title': novel_title}).execute()
+
+        # استخراج كافة روابط الفصول
         chapter_links = []
-        ignored_paths = ['/category/', '/tag/', '/privacy-policy/', '/contact/', '/about/', '/manga/']
-        
         for a in soup.find_all('a', href=True):
-            full_url = urljoin(novel_url, a['href'])
-            if "cenele.com" in full_url and full_url.strip('/') != novel_url.strip('/'):
-                if not any(path in full_url for path in ignored_paths):
-                    if full_url not in chapter_links:
-                        chapter_links.append(full_url)
+            full_url = a['href'] if a['href'].startswith('http') else f"https://cenele.com{a['href']}"
+            match = re.search(r'/(\d+)/?$', full_url)
+            if match and full_url not in chapter_links:
+                chapter_links.append((int(match.group(1)), full_url))
 
-        print(f"📊 تم العثور على {len(chapter_links)} رابط فصل.")
+        # ترتيب الفصول تصاعدياً
+        chapter_links.sort(key=lambda x: x[0])
 
-        for index, url in enumerate(chapter_links, start=1):
-            match = re.search(r'(\d+)', url.replace('https://cenele.com/', ''))
-            ch_num = int(match.group(1)) if match else index
-            fetch_and_save_chapter(novel_id, ch_num, url)
+        for ch_num, ch_url in chapter_links:
+            ch_res = requests.get(ch_url, headers=HEADERS, timeout=15)
+            ch_soup = BeautifulSoup(ch_res.text, 'html.parser')
+            
+            content_box = ch_soup.find('div', class_=re.compile(r'entry-content|chapter-content|reading-content')) or ch_soup.find('article')
+            if not content_box:
+                continue
+
+            cleaned_content = clean_text(content_box)
+            
+            supabase.table('chapters').upsert({
+                'novel_id': novel_id,
+                'chapter_number': ch_num,
+                'title': f"الفصل {ch_num}",
+                'content': cleaned_content
+            }).execute()
+            print(f"✓ تم حفظ الفصل {ch_num} للرواية: {novel_title}")
 
     except Exception as e:
-        print(f"❌ خطأ أثناء قراءة الرواية: {e}")
+        print(f"❌ خطأ أثناء معالجة الرواية {novel_url}: {e}")
 
 if __name__ == "__main__":
-    TARGET_NOVELS = [
-        {"id": "b3009d79-80f1-4dbc-8081-fa4c356ec2b1", "url": "https://cenele.com/levels/"}
-    ]
-    for novel in TARGET_NOVELS:
-        process_novel_chapters(novel["id"], novel["url"])
+    target_novels = fetch_auto_novels()
+    print(f"📚 تم العثور على {len(target_novels)} رواية.")
+    for novel in target_novels:
+        process_novel(novel['id'], novel['url'])
+
