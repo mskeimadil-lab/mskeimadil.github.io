@@ -2,6 +2,7 @@ import os
 import re
 import uuid
 import requests
+import urllib.parse
 from bs4 import BeautifulSoup
 from supabase import create_client
 
@@ -32,28 +33,33 @@ def clean_text(soup_obj):
     return cleaned.strip()
 
 def fetch_auto_novels():
-    url = "https://cenele.com/cont/"
+    urls_to_check = ["https://cenele.com/novel/", "https://cenele.com/home/", "https://cenele.com/"]
     novels = []
-    try:
-        res = requests.get(url, headers=HEADERS, timeout=15)
-        soup = BeautifulSoup(res.text, 'html.parser')
-        
-        for a in soup.find_all('a', href=True):
-            href = a['href'].strip()
-            full_url = href if href.startswith('http') else f"https://cenele.com{href}"
-            full_url = full_url.rstrip('/')
+    
+    for url in urls_to_check:
+        try:
+            res = requests.get(url, headers=HEADERS, timeout=15)
+            soup = BeautifulSoup(res.text, 'html.parser')
             
-            if '/cont/' in full_url and full_url != 'https://cenele.com/cont':
-                n_id = str(uuid.uuid5(uuid.NAMESPACE_URL, full_url))
-                if not any(n['url'] == full_url for n in novels):
-                    novels.append({'id': n_id, 'url': full_url})
-    except Exception as e:
-        print(f"Error during auto fetch: {e}")
+            for a in soup.find_all('a', href=True):
+                href = a['href'].strip()
+                full_url = href if href.startswith('http') else f"https://cenele.com{href}"
+                full_url = full_url.rstrip('/')
+                decoded_url = urllib.parse.unquote(full_url)
+                
+                if ('/cont/' in decoded_url or '/novel/' in decoded_url) and 'الفصل' not in decoded_url:
+                    if decoded_url not in ["https://cenele.com/cont", "https://cenele.com/novel"]:
+                        n_id = str(uuid.uuid5(uuid.NAMESPACE_URL, full_url))
+                        if not any(n['url'] == full_url for n in novels):
+                            novels.append({'id': n_id, 'url': full_url})
+        except Exception as e:
+            print(f"Error checking {url}: {e}")
 
     if not novels:
         fallback_urls = [
-            "https://cenele.com/cont/book-eating-magician",
-            "https://cenele.com/levels"
+            "https://cenele.com/cont/book-eatin",
+            "https://cenele.com/cont/knight-eternally-regresses",
+            "https://cenele.com/cont/i-really-villain"
         ]
         for u in fallback_urls:
             novels.append({'id': str(uuid.uuid5(uuid.NAMESPACE_URL, u)), 'url': u})
@@ -70,41 +76,54 @@ def process_novel(novel_id, novel_url):
         for bad in BAD_WORDS:
             novel_title = novel_title.replace(bad, '').strip()
 
+        print(f"📖 جاري معالجة الرواية: {novel_title}")
         supabase.table('novels').upsert({'id': novel_id, 'title': novel_title}).execute()
 
         chapter_links = []
         for a in soup.find_all('a', href=True):
-            full_url = a['href'] if a['href'].startswith('http') else f"https://cenele.com{a['href']}"
-            match = re.search(r'/(\d+)/?$', full_url)
-            if match and full_url not in chapter_links:
-                chapter_links.append((int(match.group(1)), full_url))
+            raw_url = a['href']
+            full_url = raw_url if raw_url.startswith('http') else f"https://cenele.com{raw_url}"
+            decoded_url = urllib.parse.unquote(full_url)
+            
+            match = re.search(r'الفصل[-\s_]?(\d+)', decoded_url)
+            if match:
+                ch_num = int(match.group(1))
+                if not any(x[1] == full_url for x in chapter_links):
+                    chapter_links.append((ch_num, full_url))
 
+        print(f"🔗 عُثر على {len(chapter_links)} فصل للرواية.")
         chapter_links.sort(key=lambda x: x[0])
 
         for ch_num, ch_url in chapter_links:
-            ch_res = requests.get(ch_url, headers=HEADERS, timeout=15)
-            ch_soup = BeautifulSoup(ch_res.text, 'html.parser')
-            
-            content_box = ch_soup.find('div', class_=re.compile(r'entry-content|chapter-content|reading-content')) or ch_soup.find('article')
-            if not content_box:
-                continue
+            try:
+                ch_res = requests.get(ch_url, headers=HEADERS, timeout=15)
+                ch_soup = BeautifulSoup(ch_res.text, 'html.parser')
+                
+                content_box = (
+                    ch_soup.find('div', class_=re.compile(r'entry-content|chapter-content|reading-content|reading-container|epcontent|content', re.I)) 
+                    or ch_soup.find('article')
+                    or ch_soup.body
+                )
 
-            cleaned_content = clean_text(content_box)
-            
-            supabase.table('chapters').upsert({
-                'novel_id': novel_id,
-                'chapter_number': ch_num,
-                'title': f"الفصل {ch_num}",
-                'content': cleaned_content
-            }).execute()
-            print(f"✓ تم حفظ الفصل {ch_num} للرواية: {novel_title}")
+                cleaned_content = clean_text(content_box)
+                if not cleaned_content:
+                    continue
+
+                supabase.table('chapters').upsert({
+                    'novel_id': novel_id,
+                    'chapter_number': ch_num,
+                    'title': f"الفصل {ch_num}",
+                    'content': cleaned_content
+                }).execute()
+                print(f"✓ تم حفظ الفصل {ch_num} للرواية: {novel_title}")
+            except Exception as ch_e:
+                print(f"⚠️ خطأ في معالجة الفصل {ch_num}: {ch_e}")
 
     except Exception as e:
-        print(f"Error processing novel {novel_url}: {e}")
+        print(f"❌ خطأ في معالجة الرواية {novel_url}: {e}")
 
 if __name__ == "__main__":
     target_novels = fetch_auto_novels()
     print(f"📚 تم العثور على {len(target_novels)} رواية.")
     for novel in target_novels:
         process_novel(novel['id'], novel['url'])
-
