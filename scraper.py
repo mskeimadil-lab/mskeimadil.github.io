@@ -5,7 +5,6 @@ import requests
 from bs4 import BeautifulSoup
 from supabase import create_client, Client
 
-# إعدادات Supabase
 SUPABASE_URL = os.environ.get("SUPABASE_URL")
 SUPABASE_KEY = os.environ.get("SUPABASE_KEY")
 
@@ -20,22 +19,22 @@ HEADERS = {
     "Referer": "https://cenele.com/"
 }
 
+# ضع هنا رابط صفحة الرواية الرئيسية من cenele.com
+NOVEL_URL = "https://cenele.com/series/example-novel/"
+
 def clean_text(content_box):
-    """تنظيف النص من جميع الإعلانات والشوائب والروابط الخبيثة"""
+    """دالة التنظيف الشاملة للإعلانات والشوائب"""
     if not content_box:
         return ""
 
-    # حذف العناصر غير المرغوبة
     for junk in content_box.find_all(['script', 'style', 'iframe', 'form', 'table', 'button', 'ul', 'ol', 'ins', 'a']):
         junk.decompose()
 
-    # حذف الفئات الإعلانية الخاصة بموقع cenele
     for junk_class in content_box.find_all(class_=re.compile(r'ad|banner|donate|vip|app|notice|share|download|code-block', re.I)):
         junk_class.decompose()
 
     text = content_box.get_text(separator='\n')
 
-    # عبارات التبرع والإعلانات الشائعة للتنظيف
     patterns_to_remove = [
         r'دعم .* لزيادة تنزيل الفصول.*',
         r'أنواع التبرعات المتوفرة.*',
@@ -46,6 +45,7 @@ def clean_text(content_box):
         r'Google Play',
         r'تجربة قراءة أفضل مع.*',
         r'تصفح الموقع والتطبيق بدون إعلانات.*',
+        r'تحميل الفصول وقراءتها بدون إنترنت.*',
         r'cenele\.com',
         r'المترجم\s*:.*',
         r'تاريخ النشر\s*:.*',
@@ -58,19 +58,31 @@ def clean_text(content_box):
     lines = [line.strip() for line in text.split('\n') if line.strip()]
     return '\n\n'.join(lines)
 
-def fetch_cenele_chapter(chapter_url):
-    """جلب وتنظيف محتوى فصل من موقع Cenele"""
+def get_all_chapter_links(novel_url):
+    """استخراج جميع روابط الفصول تلقائياً من صفحة الرواية"""
     try:
-        response = requests.get(chapter_url, headers=HEADERS, timeout=15)
-        if response.status_code != 200:
-            print(f"فشل جلب الصفحة {chapter_url} - كود الحالة: {response.status_code}")
-            return None
+        res = requests.get(novel_url, headers=HEADERS, timeout=15)
+        soup = BeautifulSoup(res.text, 'html.parser')
+        links = []
+        for a in soup.find_all('a', href=True):
+            href = a['href']
+            if '/chapter-' in href or re.search(r'/فصل-\d+/', href) or re.search(r'-\d+/$', href):
+                if href not in links and href.startswith('http'):
+                    links.append(href)
+        return links
+    except Exception as e:
+        print(f"خطأ في جلب روابط الفصول: {e}")
+        return []
 
-        soup = BeautifulSoup(response.text, 'html.parser')
+def scrape_and_save_chapter(chapter_url):
+    """جلب الفصل وتنظيفه ثم إرساله إلى Supabase"""
+    try:
+        res = requests.get(chapter_url, headers=HEADERS, timeout=15)
+        if res.status_code != 200:
+            return
 
-        # محددات النص الخاصة بموقع Cenele والمواقع المشابهة
+        soup = BeautifulSoup(res.text, 'html.parser')
         content_box = soup.find('div', class_=re.compile(r'text-left|entry-content|reading-content|epcontent|chapter-content', re.I))
-        
         if not content_box:
             content_box = soup.find('article') or soup.find('main')
 
@@ -78,42 +90,25 @@ def fetch_cenele_chapter(chapter_url):
             title_elem = soup.find('h1') or soup.find('h2')
             title = title_elem.get_text().strip() if title_elem else "فصل بدون عنوان"
             cleaned_body = clean_text(content_box)
-            return {"title": title, "content": cleaned_body, "url": chapter_url}
-        else:
-            print(f"لم يتم العثور على حاوي النص في: {chapter_url}")
-            return None
 
+            if cleaned_body:
+                supabase.table('chapters').upsert({
+                    'title': title,
+                    'content': cleaned_body,
+                    'source_url': chapter_url
+                }).execute()
+                print(f"تم تنظيف وحفظ: {title}")
     except Exception as e:
-        print(f"خطأ أثناء معالجة الرابط {chapter_url}: {e}")
-        return None
+        print(f"خطأ في معالجة الفصل {chapter_url}: {e}")
 
 def main():
-    print("بدء عملية سحب الفصول من موقع Cenele...")
+    print("بدء عملية الاستخراج والتنظيف التلقائي...")
+    chapter_links = get_all_chapter_links(NOVEL_URL)
+    print(f"تم العثور على {len(chapter_links)} فصل.")
 
-    # قائمة بالروابط أو الرواية المراد سحبها من Cenele
-    # استبدل هذه الروابط بروابط الفصول أو أضف دالة جلب قائمة الفصول
-    target_chapters = [
-        # مثال: "https://cenele.com/novel-name/chapter-1/"
-    ]
-
-    for url in target_chapters:
-        print(f"جاري معالجة: {url}")
-        data = fetch_cenele_chapter(url)
-        if data and data['content']:
-            # حفظ البيانات في جدول 'chapters' داخل Supabase
-            try:
-                supabase.table('chapters').upsert({
-                    'title': data['title'],
-                    'content': data['content'],
-                    'source_url': data['url']
-                }).execute()
-                print(f"تم حفظ الفصل بنجاح: {data['title']}")
-            except Exception as sb_err:
-                print(f"خطأ أثناء الحفظ في Supabase: {sb_err}")
-
-        time.sleep(2) # فترة توقف لتجنب حظر IP
-
-    print("انتهت عملية السحب والتنظيف.")
+    for link in chapter_links:
+        scrape_and_save_chapter(link)
+        time.sleep(2)
 
 if __name__ == '__main__':
     main()
