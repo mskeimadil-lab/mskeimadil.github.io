@@ -1,4 +1,3 @@
-cat << 'EOF' > scraper.py
 import os
 import re
 import time
@@ -6,7 +5,6 @@ import requests
 from bs4 import BeautifulSoup
 from supabase import create_client, Client
 
-# إعدادات الاتصال بـ Supabase
 SUPABASE_URL = os.environ.get("SUPABASE_URL")
 SUPABASE_KEY = os.environ.get("SUPABASE_KEY")
 
@@ -20,17 +18,14 @@ def clean_text(content_box):
     if not content_box:
         return ""
 
-    # 1. إزالة العناصر البرمجية والجداول والأزرار
     for junk in content_box.find_all(['script', 'style', 'iframe', 'form', 'table', 'button', 'ul', 'ol']):
         junk.decompose()
 
-    # إزالة عناصر الإعلانات والتبرعات
     for junk_class in content_box.find_all(class_=re.compile(r'ad|banner|donate|vip|app|notice|share|download', re.I)):
         junk_class.decompose()
 
     text = content_box.get_text(separator='\n')
 
-    # 2. تنظيف النصوص الإعلانية ورسائل التبرع والأكواد المائية
     patterns_to_remove = [
         r'دعم .* لزيادة تنزيل الفصول.*',
         r'أنواع التبرعات المتوفرة.*',
@@ -60,21 +55,13 @@ def clean_text(content_box):
     lines = [line.strip() for line in text.split('\n') if line.strip()]
     return '\n\n'.join(lines)
 
-def process_novel(novel_url):
-    print(f"جاري معالجة الرواية من: {novel_url}")
-    # منطق السحب والتتابع يوضع هنا عند الحاجة
-    pass
-
 def main():
     print("بدء تشغيل سكريبت سحب الروايات...")
     if not supabase:
-        print("خطأ: لم يتم ضبط بيانات الاتصال بـ Supabase (SUPABASE_URL / SUPABASE_KEY).")
+        print("خطأ: لم يتم ضبط بيانات الاتصال بـ Supabase.")
         return
-
-    # استدعاء دالة المعالجة الرئيسية
     print("السكريبت جاهز ومتصل بقاعدة البيانات بنجاح.")
 
 if __name__ == '__main__':
     main()
-EOF
 
