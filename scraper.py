@@ -19,11 +19,8 @@ HEADERS = {
     "Referer": "https://cenele.com/"
 }
 
-# ضع هنا رابط صفحة الرواية الرئيسية من cenele.com
-NOVEL_URL = "https://cenele.com/series/example-novel/"
-
 def clean_text(content_box):
-    """دالة التنظيف الشاملة للإعلانات والشوائب"""
+    """منظف النصوص الآلي من الإعلانات والشبهات"""
     if not content_box:
         return ""
 
@@ -58,33 +55,46 @@ def clean_text(content_box):
     lines = [line.strip() for line in text.split('\n') if line.strip()]
     return '\n\n'.join(lines)
 
-def get_all_chapter_links(novel_url):
-    """استخراج جميع روابط الفصول تلقائياً من صفحة الرواية"""
+def get_all_novels():
+    """استكشاف الروايات المتاحة في الموقع تلقائياً"""
+    catalog_url = "https://cenele.com/"
+    try:
+        res = requests.get(catalog_url, headers=HEADERS, timeout=15)
+        soup = BeautifulSoup(res.text, 'html.parser')
+        novel_links = []
+        for a in soup.find_all('a', href=True):
+            href = a['href']
+            if ('/series/' in href or '/novel/' in href) and href not in novel_links:
+                novel_links.append(href)
+        return novel_links
+    except Exception as e:
+        print(f"خطأ جلب قائمة الروايات: {e}")
+        return []
+
+def get_novel_chapters(novel_url):
+    """استخراج جميع فصول الرواية"""
     try:
         res = requests.get(novel_url, headers=HEADERS, timeout=15)
         soup = BeautifulSoup(res.text, 'html.parser')
-        links = []
+        chapter_links = []
         for a in soup.find_all('a', href=True):
             href = a['href']
-            if '/chapter-' in href or re.search(r'/فصل-\d+/', href) or re.search(r'-\d+/$', href):
-                if href not in links and href.startswith('http'):
-                    links.append(href)
-        return links
+            if ('/chapter-' in href or re.search(r'-\d+/$', href)) and href not in chapter_links:
+                chapter_links.append(href)
+        return chapter_links
     except Exception as e:
-        print(f"خطأ في جلب روابط الفصول: {e}")
+        print(f"خطأ جلب الفصول من الرواية {novel_url}: {e}")
         return []
 
-def scrape_and_save_chapter(chapter_url):
-    """جلب الفصل وتنظيفه ثم إرساله إلى Supabase"""
+def process_and_store_chapter(chapter_url):
+    """تنظيف وجلب فصل واحد وتخزينه"""
     try:
         res = requests.get(chapter_url, headers=HEADERS, timeout=15)
         if res.status_code != 200:
             return
 
         soup = BeautifulSoup(res.text, 'html.parser')
-        content_box = soup.find('div', class_=re.compile(r'text-left|entry-content|reading-content|epcontent|chapter-content', re.I))
-        if not content_box:
-            content_box = soup.find('article') or soup.find('main')
+        content_box = soup.find('div', class_=re.compile(r'text-left|entry-content|reading-content|epcontent|chapter-content', re.I)) or soup.find('article')
 
         if content_box:
             title_elem = soup.find('h1') or soup.find('h2')
@@ -97,18 +107,23 @@ def scrape_and_save_chapter(chapter_url):
                     'content': cleaned_body,
                     'source_url': chapter_url
                 }).execute()
-                print(f"تم تنظيف وحفظ: {title}")
+                print(f"✓ تم تنظيف وحفظ: {title}")
     except Exception as e:
-        print(f"خطأ في معالجة الفصل {chapter_url}: {e}")
+        print(f"خطأ معالجة الفصل {chapter_url}: {e}")
 
 def main():
-    print("بدء عملية الاستخراج والتنظيف التلقائي...")
-    chapter_links = get_all_chapter_links(NOVEL_URL)
-    print(f"تم العثور على {len(chapter_links)} فصل.")
+    print("بدء الأتمتة الشاملة: تتبع الروايات ← الفصول ← التنظيف ← Supabase")
+    novels = get_all_novels()
+    print(f"تم اكتشاف {len(novels)} رواية.")
 
-    for link in chapter_links:
-        scrape_and_save_chapter(link)
-        time.sleep(2)
+    for novel in novels:
+        print(f"\n---> المعالجة الحالية للرواية: {novel}")
+        chapters = get_novel_chapters(novel)
+        print(f"تم العثور على {len(chapters)} فصل.")
+
+        for chapter in chapters:
+            process_and_store_chapter(chapter)
+            time.sleep(1)
 
 if __name__ == '__main__':
     main()
