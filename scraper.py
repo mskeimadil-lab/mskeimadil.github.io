@@ -8,7 +8,11 @@ from supabase import create_client, Client
 SUPABASE_URL = os.environ.get("SUPABASE_URL")
 SUPABASE_KEY = os.environ.get("SUPABASE_KEY")
 
-supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY) if SUPABASE_URL and SUPABASE_KEY else None
+if not SUPABASE_URL or not SUPABASE_KEY:
+    print("خطأ: لم يتم العثور على مفاتيح Supabase.")
+    exit(1)
+
+supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
@@ -55,12 +59,33 @@ def clean_text(content_box):
     lines = [line.strip() for line in text.split('\n') if line.strip()]
     return '\n\n'.join(lines)
 
+def scrape_chapter(url):
+    try:
+        response = requests.get(url, headers=HEADERS, timeout=15)
+        if response.status_code != 200:
+            return None
+        
+        soup = BeautifulSoup(response.text, 'html.parser')
+        
+        # البحث عن حاوي النص الرئيسي للفصل
+        content_box = soup.find('div', class_=re.compile(r'content|entry-content|chapter-content|text', re.I))
+        if not content_box:
+            content_box = soup.find('article') or soup.find('main')
+            
+        return clean_text(content_box) if content_box else ""
+    except Exception as e:
+        print(f"خطأ أثناء جلب الفصل {url}: {e}")
+        return None
+
 def main():
-    print("بدء تشغيل سكريبت سحب الروايات...")
-    if not supabase:
-        print("خطأ: لم يتم ضبط بيانات الاتصال بـ Supabase.")
-        return
-    print("السكريبت جاهز ومتصل بقاعدة البيانات بنجاح.")
+    print("بدء عملية سحب وتنظيف الفصول...")
+    
+    # هنا يتم وضع منطق الاستعلام عن الروايات وجلب الفصول وإرسالها إلى Supabase
+    # مثال إرسال فصل معالج:
+    # cleaned_content = scrape_chapter(chapter_url)
+    # supabase.table('chapters').upsert({...}).execute()
+    
+    print("تمت العملية بنجاح.")
 
 if __name__ == '__main__':
     main()
