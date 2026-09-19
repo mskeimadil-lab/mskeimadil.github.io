@@ -5,14 +5,20 @@ import requests
 from bs4 import BeautifulSoup
 from supabase import create_client, Client
 
+print("=== بدء تشغيل سكريبت Cenele Scraper ===")
+
 SUPABASE_URL = os.environ.get("SUPABASE_URL")
 SUPABASE_KEY = os.environ.get("SUPABASE_KEY")
 
-if not SUPABASE_URL or not SUPABASE_KEY:
-    print("خطأ: لم يتم العثور على مفاتيح Supabase.")
-    exit(1)
-
-supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+supabase = None
+if SUPABASE_URL and SUPABASE_KEY:
+    try:
+        supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+        print("✓ تم الاتصال بـ Supabase بنجاح.")
+    except Exception as e:
+        print(f"خطأ في الاتصال بـ Supabase: {e}")
+else:
+    print("تنبيه: مفاتيح Supabase غير معرفة بيئياً (سيتم الفحص بدون حفظ محلي).")
 
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
@@ -20,7 +26,6 @@ HEADERS = {
 }
 
 def clean_text(content_box):
-    """منظف النصوص الآلي من الإعلانات والشبهات"""
     if not content_box:
         return ""
 
@@ -55,75 +60,46 @@ def clean_text(content_box):
     lines = [line.strip() for line in text.split('\n') if line.strip()]
     return '\n\n'.join(lines)
 
-def get_all_novels():
-    """استكشاف الروايات المتاحة في الموقع تلقائياً"""
+def main():
     catalog_url = "https://cenele.com/"
+    print(f"جاري الاتصال بالموقع: {catalog_url}")
+    
     try:
         res = requests.get(catalog_url, headers=HEADERS, timeout=15)
-        soup = BeautifulSoup(res.text, 'html.parser')
-        novel_links = []
-        for a in soup.find_all('a', href=True):
-            href = a['href']
-            if ('/series/' in href or '/novel/' in href) and href not in novel_links:
-                novel_links.append(href)
-        return novel_links
+        print(f"استجابة الموقع: {res.status_code}")
+        
+        if res.status_code == 200:
+            soup = BeautifulSoup(res.text, 'html.parser')
+            links = []
+            for a in soup.find_all('a', href=True):
+                href = a['href']
+                if ('/series/' in href or '/novel/' in href or '/chapter' in href) and href not in links:
+                    links.append(href)
+            
+            print(f"تم العثور على {len(links)} رابط في الصفحة الرئيسية.")
+            
+            # معالجة أول رابط كمثال للتأكد
+            if links:
+                target_url = links[0] if links[0].startswith('http') else f"https://cenele.com{links[0]}"
+                print(f"جاري اختبار جلب وتنظيف: {target_url}")
+                ch_res = requests.get(target_url, headers=HEADERS, timeout=15)
+                ch_soup = BeautifulSoup(ch_res.text, 'html.parser')
+                content_box = ch_soup.find('div', class_=re.compile(r'text-left|entry-content|reading-content|epcontent|chapter-content', re.I)) or ch_soup.find('article')
+                
+                cleaned = clean_text(content_box)
+                print(f"طول النص المنظف: {len(cleaned)} حرف.")
+                
+                if supabase and cleaned:
+                    title_elem = ch_soup.find('h1') or ch_soup.find('h2')
+                    title = title_elem.get_text().strip() if title_elem else "فصل بدون عنوان"
+                    supabase.table('chapters').upsert({
+                        'title': title,
+                        'content': cleaned,
+                        'source_url': target_url
+                    }).execute()
+                    print(f"✓ تم الحفظ بنجاح في Supabase: {title}")
     except Exception as e:
-        print(f"خطأ جلب قائمة الروايات: {e}")
-        return []
-
-def get_novel_chapters(novel_url):
-    """استخراج جميع فصول الرواية"""
-    try:
-        res = requests.get(novel_url, headers=HEADERS, timeout=15)
-        soup = BeautifulSoup(res.text, 'html.parser')
-        chapter_links = []
-        for a in soup.find_all('a', href=True):
-            href = a['href']
-            if ('/chapter-' in href or re.search(r'-\d+/$', href)) and href not in chapter_links:
-                chapter_links.append(href)
-        return chapter_links
-    except Exception as e:
-        print(f"خطأ جلب الفصول من الرواية {novel_url}: {e}")
-        return []
-
-def process_and_store_chapter(chapter_url):
-    """تنظيف وجلب فصل واحد وتخزينه"""
-    try:
-        res = requests.get(chapter_url, headers=HEADERS, timeout=15)
-        if res.status_code != 200:
-            return
-
-        soup = BeautifulSoup(res.text, 'html.parser')
-        content_box = soup.find('div', class_=re.compile(r'text-left|entry-content|reading-content|epcontent|chapter-content', re.I)) or soup.find('article')
-
-        if content_box:
-            title_elem = soup.find('h1') or soup.find('h2')
-            title = title_elem.get_text().strip() if title_elem else "فصل بدون عنوان"
-            cleaned_body = clean_text(content_box)
-
-            if cleaned_body:
-                supabase.table('chapters').upsert({
-                    'title': title,
-                    'content': cleaned_body,
-                    'source_url': chapter_url
-                }).execute()
-                print(f"✓ تم تنظيف وحفظ: {title}")
-    except Exception as e:
-        print(f"خطأ معالجة الفصل {chapter_url}: {e}")
-
-def main():
-    print("بدء الأتمتة الشاملة: تتبع الروايات ← الفصول ← التنظيف ← Supabase")
-    novels = get_all_novels()
-    print(f"تم اكتشاف {len(novels)} رواية.")
-
-    for novel in novels:
-        print(f"\n---> المعالجة الحالية للرواية: {novel}")
-        chapters = get_novel_chapters(novel)
-        print(f"تم العثور على {len(chapters)} فصل.")
-
-        for chapter in chapters:
-            process_and_store_chapter(chapter)
-            time.sleep(1)
+        print(f"خطأ أثناء التنفيذ: {e}")
 
 if __name__ == '__main__':
     main()
