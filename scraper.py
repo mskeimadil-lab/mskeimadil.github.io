@@ -2,9 +2,10 @@ import os
 import re
 import time
 import requests
+import json
 from bs4 import BeautifulSoup
 
-print("=== بدء السحب والحفظ في جيت هاب ===")
+print("=== بدء السحب وإنشاء الفهرس ===")
 
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
@@ -12,23 +13,16 @@ HEADERS = {
 }
 
 os.makedirs("data", exist_ok=True)
+catalog = []
 
 def clean_text(content_box):
-    if not content_box:
-        return ""
+    if not content_box: return ""
     for junk in content_box.find_all(['script', 'style', 'iframe', 'form', 'table', 'button', 'ul', 'ol', 'ins', 'a']):
         junk.decompose()
     for junk_class in content_box.find_all(class_=re.compile(r'ad|banner|donate|vip|app|notice|share|download|code-block', re.I)):
         junk_class.decompose()
-        
     text = content_box.get_text(separator='\n')
-    patterns = [
-        r'دعم .* لزيادة تنزيل الفصول.*', r'أنواع التبرعات المتوفرة.*', r'تنزيل \d+ فصول?.*', 
-        r'USD \d+\.\d+\$?', r'حمل التطبيق لقراءة أسرع.*', r'حمله من هنا من جوجل بلاي.*', 
-        r'Google Play', r'تجربة قراءة أفضل مع.*', r'تصفح الموقع والتطبيق بدون إعلانات.*', 
-        r'تحميل الفصول وقراءتها بدون إنترنت.*', r'cenele\.com', r'المترجم\s*:.*', 
-        r'تاريخ النشر\s*:.*', r'عدد الكلمات\s*:.*'
-    ]
+    patterns = [r'دعم .* لزيادة تنزيل الفصول.*', r'أنواع التبرعات المتوفرة.*', r'تنزيل \d+ فصول?.*', r'USD \d+\.\d+\$?', r'حمل التطبيق لقراءة أسرع.*', r'حمله من هنا من جوجل بلاي.*', r'Google Play', r'تجربة قراءة أفضل مع.*', r'تصفح الموقع والتطبيق بدون إعلانات.*', r'تحميل الفصول وقراءتها بدون إنترنت.*', r'cenele\.com', r'المترجم\s*:.*', r'تاريخ النشر\s*:.*', r'عدد الكلمات\s*:.*']
     for p in patterns:
         text = re.sub(p, '', text, flags=re.IGNORECASE)
     lines = [line.strip() for line in text.split('\n') if line.strip()]
@@ -47,7 +41,7 @@ def get_novel_links():
                     full_url = href if href.startswith('http') else f"https://cenele.com{href}"
                     novels.append(full_url)
     except Exception as e:
-        print(f"خطأ جلب الروايات: {e}")
+        print(f"خطأ: {e}")
     return novels
 
 def get_chapter_links(novel_url):
@@ -62,46 +56,55 @@ def get_chapter_links(novel_url):
                     full_url = href if href.startswith('http') else f"https://cenele.com{href}"
                     chapters.append(full_url)
     except Exception as e:
-        print(f"خطأ جلب الفصول: {e}")
+        pass
     return chapters
 
 def process_chapter(chapter_url, novel_title, chapter_idx):
     try:
         res = requests.get(chapter_url, headers=HEADERS, timeout=15)
-        if res.status_code != 200: return
+        if res.status_code != 200: return None
         soup = BeautifulSoup(res.text, 'html.parser')
         content_box = soup.find('div', class_=re.compile(r'text-left|entry-content|reading-content|epcontent|chapter-content', re.I)) or soup.find('article')
-        
         if content_box:
             title_elem = soup.find('h1') or soup.find('h2')
             title = title_elem.get_text().strip() if title_elem else f"Chapter {chapter_idx}"
             cleaned = clean_text(content_box)
-            
             if cleaned:
                 safe_novel_title = re.sub(r'[\\/*?:"<>|]', "", novel_title).strip()
                 safe_chapter_title = re.sub(r'[\\/*?:"<>|]', "", title).strip()
-                
                 novel_dir = os.path.join("data", safe_novel_title)
                 os.makedirs(novel_dir, exist_ok=True)
-                
                 file_path = os.path.join(novel_dir, f"{safe_chapter_title}.txt")
                 with open(file_path, "w", encoding="utf-8") as f:
                     f.write(f"{title}\n\n{cleaned}")
-                print(f"✓ تم حفظ: {title}")
+                return {"title": safe_chapter_title, "file": f"data/{safe_novel_title}/{safe_chapter_title}.txt"}
     except Exception as e:
-        print(f"خطأ أثناء الحفظ: {e}")
+        pass
+    return None
 
 def main():
     novels = get_novel_links()
-    # وضعنا حد روايتين و 5 فصول للتجربة السريعة فقط. 
     for idx, novel_url in enumerate(novels[:2], 1): 
         novel_title = novel_url.strip('/').split('/')[-1].replace('-', ' ').title()
-        print(f"\n[{idx}/{len(novels[:2])}] معالجة: {novel_title}")
+        safe_novel_title = re.sub(r'[\\/*?:"<>|]', "", novel_title).strip()
+        print(f"\nمعالجة: {safe_novel_title}")
         
+        novel_data = {"title": safe_novel_title, "cover": "", "chapters": []}
         chapters = get_chapter_links(novel_url)
+        
         for c_idx, chapter in enumerate(chapters[:5], 1):
-            process_chapter(chapter, novel_title, c_idx)
+            ch_info = process_chapter(chapter, novel_title, c_idx)
+            if ch_info:
+                novel_data["chapters"].append(ch_info)
             time.sleep(1)
+            
+        if novel_data["chapters"]:
+            catalog.append(novel_data)
+
+    # حفظ الفهرس ليقرأه الموقع
+    with open("data/catalog.json", "w", encoding="utf-8") as f:
+        json.dump(catalog, f, ensure_ascii=False, indent=4)
+    print("\n✓ تم إنشاء catalog.json بنجاح!")
 
 if __name__ == '__main__':
     main()
