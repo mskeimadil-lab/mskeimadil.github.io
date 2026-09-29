@@ -3,23 +3,15 @@ import re
 import time
 import requests
 from bs4 import BeautifulSoup
-from supabase import create_client, Client
 
-print("=== بدء خط السحب والتنظيف الشامل ===")
-
-SUPABASE_URL = os.environ.get("SUPABASE_URL")
-SUPABASE_KEY = os.environ.get("SUPABASE_KEY")
-
-if not SUPABASE_URL or not SUPABASE_KEY:
-    print("خطأ: لم يتم العثور على مفاتيح Supabase.")
-    exit(1)
-
-supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+print("=== بدء السحب والحفظ في جيت هاب ===")
 
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
     "Referer": "https://cenele.com/"
 }
+
+os.makedirs("data", exist_ok=True)
 
 def clean_text(content_box):
     if not content_box:
@@ -73,24 +65,7 @@ def get_chapter_links(novel_url):
         print(f"خطأ جلب الفصول: {e}")
     return chapters
 
-def get_or_create_novel(novel_url):
-    """جلب معرّف الرواية أو إنشاؤها في جدول novels لربطها بالفصول"""
-    slug = novel_url.strip('/').split('/')[-1]
-    title = slug.replace('-', ' ').title()
-    try:
-        # البحث عن الرواية
-        res = supabase.table('novels').select('id').ilike('title', f"%{title}%").limit(1).execute()
-        if res.data:
-            return res.data[0]['id']
-        # إنشاؤها إن لم تكن موجودة
-        insert_res = supabase.table('novels').insert({'title': title}).execute()
-        if insert_res.data:
-            return insert_res.data[0]['id']
-    except Exception as e:
-        print(f"تنبيه: خطأ في جدول novels: {e}")
-    return None
-
-def process_chapter(chapter_url, novel_id):
+def process_chapter(chapter_url, novel_title, chapter_idx):
     try:
         res = requests.get(chapter_url, headers=HEADERS, timeout=15)
         if res.status_code != 200: return
@@ -99,34 +74,33 @@ def process_chapter(chapter_url, novel_id):
         
         if content_box:
             title_elem = soup.find('h1') or soup.find('h2')
-            title = title_elem.get_text().strip() if title_elem else "فصل بدون عنوان"
+            title = title_elem.get_text().strip() if title_elem else f"Chapter {chapter_idx}"
             cleaned = clean_text(content_box)
             
             if cleaned:
-                payload = {
-                    'title': title,
-                    'content': cleaned,
-                    'source_url': chapter_url
-                }
-                # إضافة المعرّف إذا وُجد لتفادي رفض قاعدة البيانات
-                if novel_id:
-                    payload['novel_id'] = novel_id
-                    
-                supabase.table('chapters').upsert(payload).execute()
-                print(f"✓ تم الحفظ: {title}")
+                safe_novel_title = re.sub(r'[\\/*?:"<>|]', "", novel_title).strip()
+                safe_chapter_title = re.sub(r'[\\/*?:"<>|]', "", title).strip()
+                
+                novel_dir = os.path.join("data", safe_novel_title)
+                os.makedirs(novel_dir, exist_ok=True)
+                
+                file_path = os.path.join(novel_dir, f"{safe_chapter_title}.txt")
+                with open(file_path, "w", encoding="utf-8") as f:
+                    f.write(f"{title}\n\n{cleaned}")
+                print(f"✓ تم حفظ: {title}")
     except Exception as e:
-        print(f"خطأ أثناء الحفظ في قاعدة البيانات: {e}")
+        print(f"خطأ أثناء الحفظ: {e}")
 
 def main():
     novels = get_novel_links()
-    print(f"تم اكتشاف {len(novels)} رواية.")
-    for idx, novel in enumerate(novels, 1):
-        print(f"\n[{idx}/{len(novels)}] معالجة: {novel}")
-        novel_id = get_or_create_novel(novel)
+    # وضعنا حد روايتين و 5 فصول للتجربة السريعة فقط. 
+    for idx, novel_url in enumerate(novels[:2], 1): 
+        novel_title = novel_url.strip('/').split('/')[-1].replace('-', ' ').title()
+        print(f"\n[{idx}/{len(novels[:2])}] معالجة: {novel_title}")
         
-        chapters = get_chapter_links(novel)
-        for chapter in chapters:
-            process_chapter(chapter, novel_id)
+        chapters = get_chapter_links(novel_url)
+        for c_idx, chapter in enumerate(chapters[:5], 1):
+            process_chapter(chapter, novel_title, c_idx)
             time.sleep(1)
 
 if __name__ == '__main__':
